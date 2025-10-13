@@ -23,6 +23,9 @@ RUN wget -q -O /tmp/google-chrome-key.gpg https://dl.google.com/linux/linux_sign
     && apt-get install -y google-chrome-stable \
     && rm -rf /var/lib/apt/lists/* /tmp/google-chrome-key.gpg
 
+# Chrome ve ChromeDriver test
+RUN google-chrome --version
+
 # ChromeDriver'ı yükle
 RUN CHROME_DRIVER_VERSION=$(curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE) \
     && wget -N http://chromedriver.storage.googleapis.com/$CHROME_DRIVER_VERSION/chromedriver_linux64.zip -P ~/ \
@@ -71,7 +74,7 @@ chmod 755 /app/instance\n\
 \n\
 # X11 server başlat (background)\n\
 export DISPLAY=:99\n\
-Xvfb :99 -screen 0 1024x768x16 -nolisten tcp -nolisten unix &\n\
+Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset &\n\
 XVFB_PID=$!\n\
 \n\
 # X11 serverın hazır olmasını bekle\n\
@@ -83,6 +86,10 @@ FLUXBOX_PID=$!\n\
 \n\
 # X11 bağlantısını test et\n\
 timeout 10 sh -c "until xdpyinfo -display :99 >/dev/null 2>&1; do sleep 1; done" || echo "X11 warning: Display may not be ready"\n\
+\n\
+# Chrome test et\n\
+echo "Testing Chrome..."\n\
+DISPLAY=:99 google-chrome --headless --no-sandbox --disable-dev-shm-usage --version || echo "Chrome test warning"\n\
 \n\
 # Veritabanı dosyasının izinlerini kontrol et\n\
 if [ ! -f /app/instance/browser_test.db ]; then\n\

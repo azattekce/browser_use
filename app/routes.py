@@ -533,8 +533,9 @@ Sonra aşağıdaki adımları takip et:
         
         log_step(f"🤖 LLM Provider: {config['llm_provider']} ({config['llm_model']})")
         log_step(f"📊 Max Steps: {config['max_steps']} (Type: {type(config['max_steps'])})")
-        log_step(f"👁️ Headless Mode: {config['headless']}")
+        log_step(f"👁️ Headless Mode: {config['headless']} (Docker: {is_docker})")
         log_step(f"🖥️ Window Size: {config['window_width']}x{config['window_height']}")
+        log_step(f"🐳 Environment: {'Docker Container' if is_docker else 'Local Development'}")
         
         # LLM konfigürasyonunu dinamik olarak oluştur
         def get_llm_config(config):
@@ -573,9 +574,15 @@ Sonra aşağıdaki adımları takip et:
                 log_step(f"⚠️ Bilinmeyen provider '{provider}', Browser-Use default kullanılacak")
                 return None
         
-        # Browser config - FORCED VISIBLE MODE
+        # Browser config - Docker destekli
+        # Docker container'da mı çalışıyoruz kontrol et
+        is_docker = os.getenv('DOCKER_USER') is not None
+        
+        # Headless modunu Docker durumuna göre ayarla
+        use_headless = config['headless'] if not is_docker else True
+        
         browser_config = {
-            "headless": False,  # Zorla görünür mod
+            "headless": use_headless,
             "window_size": (config['window_width'], config['window_height']),
             "page_load_strategy": "eager",
             "implicit_wait": config['implicit_wait'],
@@ -583,11 +590,26 @@ Sonra aşağıdaki adımları takip et:
             "disable_images": False,
             "disable_javascript": False,
             "chrome_options": [
-                "--start-maximized",
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
                 "--disable-web-security",
                 "--disable-features=VizDisplayCompositor"
             ]
         }
+        
+        # Docker'da ek Chrome seçenekleri ekle
+        if is_docker:
+            browser_config["chrome_options"].extend([
+                "--disable-setuid-sandbox",
+                "--no-first-run",
+                "--disable-default-apps",
+                "--disable-infobars",
+                "--window-size=1920,1080"
+            ])
+        else:
+            # Yerel çalıştırmada maximize et
+            browser_config["chrome_options"].append("--start-maximized")
         
         log_step(f"⚙️ Browser Config: {browser_config}")
         
