@@ -46,7 +46,7 @@ RUN mkdir -p /app/instance && chmod 755 /app/instance
 RUN mkdir -p /app/logs && chmod 755 /app/logs
 
 # Port'u belirle
-EXPOSE 5000
+EXPOSE 5001
 
 # Çevre değişkenlerini ayarla
 ENV FLASK_APP=run.py
