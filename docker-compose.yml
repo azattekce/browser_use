@@ -3,6 +3,8 @@ services:
     build: .
     ports:
       - "5001:5001"
+    env_file:
+      - .env
     volumes:
       - browser_test_instance:/app/instance:rw
       - browser_test_logs:/app/logs:rw
@@ -15,6 +17,18 @@ services:
       - DISPLAY=:99
       - DOCKER_USER=docker_admin
       - PORT=5001
+      # LLM API Keys - Host .env dosyasından alınacak
+      - LLM_PROVIDER=${LLM_PROVIDER:-gemini}
+      - LLM_MODEL=${LLM_MODEL:-gemini-flash-latest}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      # Browser automation config
+      - WINDOW_WIDTH=1920
+      - WINDOW_HEIGHT=1080
+      - IMPLICIT_WAIT=5
+      - EXPLICIT_WAIT=10
+      - MAX_STEPS=50
     restart: unless-stopped
     privileged: true
     healthcheck:

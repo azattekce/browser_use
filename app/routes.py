@@ -625,23 +625,52 @@ Sonra aşağıdaki adımları takip et:
         # Dinamik LLM konfigürasyonu ile Agent oluştur
         if llm_config:
             log_step(f"✅ Kullanılan LLM: {llm_config['provider']} - {llm_config['model']}")
-            agent = Agent(
-                task=formatted_prompt,
-                llm_config=llm_config,
-                max_steps=max_steps_int,
-                use_vision=True,
-                save_conversation_history=False,
-                browser_config=browser_config
-            )
+            try:
+                agent = Agent(
+                    task=formatted_prompt,
+                    llm_config=llm_config,
+                    max_steps=max_steps_int,
+                    use_vision=True,
+                    save_conversation_history=False,
+                    browser_config=browser_config
+                )
+            except Exception as e:
+                log_step(f"❌ LLM konfigürasyonu hatası: {e}")
+                log_step("� OpenAI default ile deneniyor...")
+                # OpenAI default deneme
+                try:
+                    agent = Agent(
+                        task=formatted_prompt,
+                        llm_config={"provider": "openai", "model": "gpt-4o"},
+                        max_steps=max_steps_int,
+                        use_vision=True,
+                        save_conversation_history=False,
+                        browser_config=browser_config
+                    )
+                except Exception as e2:
+                    log_step(f"❌ OpenAI default da başarısız: {e2}")
+                    raise Exception(f"LLM yapılandırması başarısız: {e}")
         else:
-            log_step("🔧 Browser-Use default LLM kullanılıyor (Gemini Flash Latest)")
-            agent = Agent(
-                task=formatted_prompt,
-                max_steps=max_steps_int,
-                use_vision=True,
-                save_conversation_history=False,
-                browser_config=browser_config
-            )
+            log_step("🔧 API key yok - OpenAI default LLM kullanılıyor")
+            try:
+                # API key olmadığında OpenAI default deneme
+                agent = Agent(
+                    task=formatted_prompt,
+                    llm_config={"provider": "openai", "model": "gpt-4o"},
+                    max_steps=max_steps_int,
+                    use_vision=True,
+                    save_conversation_history=False,
+                    browser_config=browser_config
+                )
+            except Exception as e:
+                log_step(f"❌ OpenAI default başarısız: {e}")
+                log_step("🔄 Browser-Use varsayılan yapılandırması deneniyor...")
+                # Son çare: sadece temel parametrelerle
+                agent = Agent(
+                    task=formatted_prompt,
+                    max_steps=max_steps_int,
+                    browser_config=browser_config
+                )
         
         log_step("🌐 Browser açılıyor ve test başlatılıyor...")
         log_step("🤖 Browser-use AI Agent devreye giriyor...")
