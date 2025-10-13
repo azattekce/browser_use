@@ -1,0 +1,36 @@
+services:
+  browser-test-app:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - browser_test_instance:/app/instance:rw
+      - browser_test_logs:/app/logs:rw
+    environment:
+      - FLASK_ENV=production
+      - SECRET_KEY=production-secret-key-change-me
+      - DATABASE_URL=sqlite:////app/instance/browser_test.db
+      - HEADLESS=True
+      - PYTHONPATH=/app
+      - DISPLAY=:99
+      - DOCKER_USER=docker_admin
+    restart: unless-stopped
+    privileged: true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - browser-test-network
+
+networks:
+  browser-test-network:
+    driver: bridge
+
+volumes:
+  browser_test_instance:
+    driver: local
+  browser_test_logs:
+    driver: local

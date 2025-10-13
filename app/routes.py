@@ -66,10 +66,10 @@ def login():
     form = LoginForm()
     
     if form.validate_on_submit():
-        # Windows kullanıcı adını al
-        windows_username = os.getenv('USERNAME')
+        # Kullanıcı adını al (Windows'dan veya environment'dan)
+        windows_username = os.getenv('USERNAME') or os.getenv('USER') or os.getenv('DOCKER_USER') or 'docker_user'
         if not windows_username:
-            flash('Windows kullanıcı adı alınamadı!', 'error')
+            flash('Kullanıcı adı alınamadı!', 'error')
             return render_template('auth/login.html', form=form)
         
         # Kullanıcıyı bul veya oluştur
@@ -83,14 +83,14 @@ def login():
                 user.is_admin = True
             db.session.add(user)
             db.session.commit()
-            flash(f'Windows kullanıcısı {windows_username} ile yeni hesap oluşturuldu!', 'success')
+            flash(f'Kullanıcı {windows_username} ile yeni hesap oluşturuldu!', 'success')
         
         login_user(user)
-        flash(f'Windows kullanıcısı {windows_username} olarak giriş yapıldı!', 'success')
+        flash(f'Kullanıcı {windows_username} olarak giriş yapıldı!', 'success')
         return redirect(url_for('main.dashboard'))
     
-    # GET request için Windows kullanıcı adını al
-    windows_username = os.getenv('USERNAME', 'Bilinmeyen Kullanıcı')
+    # GET request için kullanıcı adını al
+    windows_username = os.getenv('USERNAME') or os.getenv('USER') or os.getenv('DOCKER_USER') or 'docker_user'
     return render_template('auth/login.html', form=form, windows_user=windows_username)
 
 # Çıkış
@@ -493,12 +493,16 @@ def run_browser_test_async(app, test_result_id, project_url, prompt_content):
                 return default
         
         # Prompt içeriğini URL ile değiştir ve daha net hale getir
+        # F-string içinde backslash kullanılamadığı için değişkenleri önceden hazırlıyoruz
+        url_placeholder = "Belirtilen URL'yi ziyaret et: {url}"
+        cleaned_content = prompt_content.replace(url_placeholder, '').replace('1. adım:', 'Adım 1:').replace('2. adım:', 'Adım 2:')
+        
         formatted_prompt = f"""
 Öncelikle şu web sitesini ziyaret et: {project_url}
 
 Sonra aşağıdaki adımları takip et:
 
-{prompt_content.replace('Belirtilen URL\'yi ziyaret et: {url}', '').replace('1. adım:', 'Adım 1:').replace('2. adım:', 'Adım 2:')}
+{cleaned_content}
 """
         
         log_step(f"🌐 Hedef URL: {project_url}")
