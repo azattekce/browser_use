@@ -518,6 +518,9 @@ Sonra aşağıdaki adımları takip et:
         
         # Konfigürasyon değerleri
         
+        # Docker container'da mı çalışıyoruz kontrol et
+        is_docker = os.getenv('DOCKER_USER') is not None
+        
         config = {
             'max_steps': safe_int(os.getenv('MAX_STEPS'), 100),
             'headless': os.getenv('HEADLESS', 'False').lower() == 'true',
@@ -575,9 +578,6 @@ Sonra aşağıdaki adımları takip et:
                 return None
         
         # Browser config - Docker destekli
-        # Docker container'da mı çalışıyoruz kontrol et
-        is_docker = os.getenv('DOCKER_USER') is not None
-        
         # Headless modunu Docker durumuna göre ayarla
         use_headless = config['headless'] if not is_docker else True
         
