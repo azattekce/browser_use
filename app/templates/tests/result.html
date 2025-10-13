@@ -303,9 +303,17 @@
                         <i class="fas fa-sync-alt me-2"></i> Sayfayı Yenile
                     </button>
                 {% endif %}
+                
+                {% if test_result.status in ['completed', 'failed'] %}
+                    <button class="btn btn-success" onclick="confirmRerun()">
+                        <i class="fas fa-redo me-2"></i> Tekrar Çalıştır
+                    </button>
+                {% endif %}
+                
                 <a href="{{ url_for('test.test_history') }}" class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left me-2"></i> Test Geçmişine Dön
                 </a>
+                
                 {% if test_result.status in ['completed', 'failed'] %}
                     <button class="btn btn-outline-danger" onclick="confirmDelete()">
                         <i class="fas fa-trash me-2"></i> Testi Sil
@@ -316,6 +324,40 @@
         </div>
     </div>
 </div>
+
+<!-- Test Tekrar Çalıştırma Onay Modal -->
+<div class="modal fade" id="rerunModal" tabindex="-1" aria-labelledby="rerunModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-success text-white border-0">
+                <h5 class="modal-title" id="rerunModalLabel">
+                    <i class="fas fa-redo me-2"></i>Test Tekrar Çalıştır
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <div class="mb-3">
+                    <i class="fas fa-question-circle text-success" style="font-size: 3rem;"></i>
+                </div>
+                <h6 class="mb-3">Bu testi tekrar çalıştırmak istediğinizden emin misiniz?</h6>
+                <p class="text-muted mb-0">
+                    <small>
+                        <strong>{{ test_result.prompt.name }}</strong> promptu ile yeni bir test başlatılacaktır.
+                    </small>
+                </p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>İptal
+                </button>
+                <button type="button" class="btn btn-success" onclick="executeRerun()">
+                    <i class="fas fa-redo me-2"></i>Evet, Tekrar Çalıştır
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -357,6 +399,44 @@ function confirmDelete() {
             alert('Test silinirken bir hata oluştu. Lütfen tekrar deneyiniz.');
         });
     }
+}
+
+// Test tekrar çalıştırma onayı - Modal göster
+function confirmRerun() {
+    const rerunModal = new bootstrap.Modal(document.getElementById('rerunModal'));
+    rerunModal.show();
+}
+
+// Test tekrar çalıştırma işlemini gerçekleştir
+function executeRerun() {
+    const testId = {{ test_result.id }};
+    const rerunModal = bootstrap.Modal.getInstance(document.getElementById('rerunModal'));
+    
+    fetch(`/tests/result/${testId}/rerun`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token() }}',
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        rerunModal.hide();
+        if (data.success) {
+            // Başarı mesajı göster ve yönlendir
+            alert('Test başarıyla tekrar başlatıldı!');
+            setTimeout(() => {
+                window.location.href = `/tests/result/${data.new_test_id}`;
+            }, 1000);
+        } else {
+            alert('Test tekrar çalıştırılırken bir hata oluştu: ' + (data.message || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        rerunModal.hide();
+        console.error('Error:', error);
+        alert('Test tekrar çalıştırılırken bir hata oluştu. Lütfen tekrar deneyiniz.');
+    });
 }
 
 // Smooth scrolling for anchor links

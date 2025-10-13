@@ -339,6 +339,54 @@ def delete_test_result(test_result_id):
         db.session.rollback()
         return jsonify({'success': False, 'message': f'Test silinirken hata oluştu: {str(e)}'}), 500
 
+# Test tekrar çalıştırma endpoint
+@test_bp.route('/result/<int:test_result_id>/rerun', methods=['POST'])
+@login_required
+def rerun_test(test_result_id):
+    """Mevcut test ile aynı parametreleri kullanarak yeni bir test çalıştır"""
+    original_test = TestResult.query.get_or_404(test_result_id)
+    prompt = TestPrompt.query.get_or_404(original_test.prompt_id)
+    project = Project.query.get_or_404(prompt.project_id)
+    
+    # Kullanıcı yetkisi kontrolü
+    if project.user_id != current_user.id:
+        return jsonify({'success': False, 'message': 'Bu testi tekrar çalıştırma yetkiniz yok!'}), 403
+    
+    # Çalışan testi tekrar çalıştırmaya izin verme
+    if original_test.status == 'running':
+        return jsonify({'success': False, 'message': 'Test hala çalışıyor! Önce mevcut testi bekleyin veya durdurun.'}), 400
+    
+    try:
+        # Yeni test sonucu oluştur - tüm zorunlu alanları doldur
+        new_test = TestResult(
+            project_id=project.id,
+            prompt_id=prompt.id,
+            user_id=current_user.id,
+            status='running',
+            project_url=project.url,
+            current_step=0,
+            total_steps=0
+        )
+        db.session.add(new_test)
+        db.session.commit()
+        
+        # Arka planda testi başlat
+        thread = threading.Thread(
+            target=run_browser_test_async,
+            args=(current_app._get_current_object(), new_test.id, project.url, prompt.content),
+            daemon=True
+        )
+        thread.start()
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Test başarıyla tekrar başlatıldı!',
+            'new_test_id': new_test.id
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Test tekrar çalıştırılırken hata oluştu: {str(e)}'}), 500
+
 # Test sonucu API (AJAX için)
 @test_bp.route('/api/result/<int:test_result_id>')
 @login_required
