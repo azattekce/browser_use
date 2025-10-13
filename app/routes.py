@@ -9,6 +9,7 @@ import threading
 import time
 import asyncio
 import json
+import json
 from datetime import datetime
 
 # Blueprints
@@ -311,6 +312,33 @@ def test_result(test_result_id):
     
     return render_template('tests/result.html', test_result=test_result, prompt=prompt, project=project)
 
+# Test silme endpoint
+@test_bp.route('/result/<int:test_result_id>/delete', methods=['POST'])
+@login_required
+def delete_test_result(test_result_id):
+    """Test sonucunu sil"""
+    test_result = TestResult.query.get_or_404(test_result_id)
+    prompt = TestPrompt.query.get_or_404(test_result.prompt_id)
+    project = Project.query.get_or_404(prompt.project_id)
+    
+    # Kullanıcı yetkisi kontrolü
+    if project.user_id != current_user.id:
+        return jsonify({'success': False, 'message': 'Bu testi silme yetkiniz yok!'}), 403
+    
+    # Çalışan testi silmeye izin verme
+    if test_result.status == 'running':
+        return jsonify({'success': False, 'message': 'Çalışan test silinemez! Önce testi durdurun.'}), 400
+    
+    try:
+        # Test sonucunu sil
+        db.session.delete(test_result)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Test başarıyla silindi.'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Test silinirken hata oluştu: {str(e)}'}), 500
+
 # Test sonucu API (AJAX için)
 @test_bp.route('/api/result/<int:test_result_id>')
 @login_required
@@ -363,24 +391,6 @@ def api_stop_test(test_result_id):
         return jsonify({'success': True, 'message': 'Test durdurma talebi gönderildi'})
     else:
         return jsonify({'error': 'Test zaten tamamlanmış veya durdurulmuş'}), 400
-
-# Test sonucu silme
-@test_bp.route('/result/<int:test_result_id>/delete', methods=['POST'])
-@login_required
-def delete_test_result(test_result_id):
-    test_result = TestResult.query.get_or_404(test_result_id)
-    prompt = TestPrompt.query.get_or_404(test_result.prompt_id)
-    project = Project.query.get_or_404(prompt.project_id)
-    
-    # Kullanıcı yetkisi kontrolü
-    if project.user_id != current_user.id:
-        flash('Bu test sonucunu silme yetkiniz yok!', 'error')
-        return redirect(url_for('project.list_projects'))
-    
-    db.session.delete(test_result)
-    db.session.commit()
-    flash('Test sonucu başarıyla silindi!', 'success')
-    return redirect(url_for('project.project_detail', project_id=project.id))
 
 def run_browser_test_async(app, test_result_id, project_url, prompt_content):
     """Arka planda browser test çalıştır - GERÇEK BROWSER AUTOMATION"""
