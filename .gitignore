@@ -1,28 +1,16 @@
-# Environment variables".env" 
-
-.env"node_modules/" 
-
-.env.local"dist/"
+# Environment variables
+.env
 .env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-.env.development.local"build/"
-
-.env.test.local".DS_Store"
-
-.env.production.local".vscode/"
-
-"*.log"
-
-# Python"*.tmp"
-
-__pycache__/"coverage/"
-
-*.py[cod]"*.bak" 
-
-*$py.class"*.swp"
-
-*.so"*.swo" 
-
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
 .Python
 build/
 develop-eggs/
