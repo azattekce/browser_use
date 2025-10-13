@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Test Geçmişi - Browser Test{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-history"></i> Test Geçmişi</h2>
+    <a href="{{ url_for('test.run_tests') }}" class="btn btn-primary">
+        <i class="fas fa-play"></i> Yeni Test Çalıştır
+    </a>
+</div>
+
+{% if test_results %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-clipboard-list"></i> Test Sonuçları ({{ test_results|length }})</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Proje</th>
+                        <th>Test Promptu</th>
+                        <th>Durum</th>
+                        <th>Başlama Zamanı</th>
+                        <th>Tamamlanma Zamanı</th>
+                        <th>Süre</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for test in test_results %}
+            <tr>
+                <td>
+                    <strong class="text-primary">{{ test.prompt.project.name }}</strong>
+                    <br><small class="text-muted">{{ test.prompt.project.url[:40] }}...</small>
+                </td>
+                <td>
+                    <strong>{{ test.prompt.name }}</strong>
+                    <br><small class="text-muted">{{ test.prompt.content[:50] }}...</small>
+                </td>
+                <td>
+                    {% if test.status == 'running' %}
+                        <span class="badge bg-warning">
+                            <i class="fas fa-spinner fa-spin"></i> Çalışıyor
+                        </span>
+                    {% elif test.status == 'completed' %}
+                        <span class="badge bg-success">
+                            <i class="fas fa-check"></i> Tamamlandı
+                        </span>
+                    {% elif test.status == 'failed' %}
+                        <span class="badge bg-danger">
+                            <i class="fas fa-times"></i> Başarısız
+                        </span>
+                    {% endif %}
+                </td>
+                <td>{{ test.created_at.strftime('%d.%m.%Y %H:%M:%S') }}</td>
+                <td>
+                    {% if test.completed_at %}
+                        {{ test.completed_at.strftime('%d.%m.%Y %H:%M:%S') }}
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if test.completed_at %}
+                        {% set duration = (test.completed_at - test.created_at).total_seconds() %}
+                        {% if duration < 60 %}
+                            {{ "%.0f" | format(duration) }}s
+                        {% else %}
+                            {{ "%.1f" | format(duration / 60) }}dk
+                        {% endif %}
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="btn-group" role="group">
+                        <a href="{{ url_for('test.test_result', test_result_id=test.id) }}" 
+                           class="btn btn-sm btn-outline-primary" title="Sonucu Görüntüle">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        {% if test.status == 'running' %}
+                            <button class="btn btn-sm btn-outline-warning" 
+                                    onclick="stopTest({{ test.id }})" title="Testi Durdur">
+                                <i class="fas fa-stop"></i>
+                            </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="mt-4">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-success">{{ test_results|selectattr('status', 'equalto', 'completed')|list|length }}</h5>
+                    <p class="card-text">Başarılı Test</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-warning">{{ test_results|selectattr('status', 'equalto', 'running')|list|length }}</h5>
+                    <p class="card-text">Çalışan Test</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-danger">{{ test_results|selectattr('status', 'equalto', 'failed')|list|length }}</h5>
+                    <p class="card-text">Başarısız Test</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title text-info">{{ test_results|length }}</h5>
+                    <p class="card-text">Toplam Test</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="text-center py-5">
+    <div class="mb-4">
+        <i class="fas fa-history fa-5x text-muted"></i>
+    </div>
+    <h4 class="text-muted">Henüz test geçmişi bulunmuyor</h4>
+    <p class="text-muted">İlk testinizi çalıştırarak başlayın.</p>
+    <a href="{{ url_for('test.run_tests') }}" class="btn btn-primary">
+        <i class="fas fa-play-circle"></i> İlk Testinizi Çalıştırın
+    </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function stopTest(testResultId) {
+    if (confirm('Bu testi durdurmak istediğinizden emin misiniz?')) {
+        fetch(`/tests/api/result/${testResultId}/stop`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+            }
+        }).then(response => {
+            if (response.ok) {
+                location.reload();
+            }
+        });
+    }
+}
+
+// Sayfa yüklendiğinde çalışan testler için otomatik yenileme
+document.addEventListener('DOMContentLoaded', function() {
+    const runningTests = document.querySelectorAll('.badge.bg-warning');
+    if (runningTests.length > 0) {
+        // 30 saniyede bir sayfayı yenile
+        setTimeout(function() {
+            location.reload();
+        }, 30000);
+    }
+});
+</script>
+{% endblock %}

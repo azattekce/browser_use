@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}{{ prompt.name }} - Test Çalıştır{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-play-circle"></i> Test Çalıştır: {{ prompt.name }}</h4>
+                <p class="mb-0 text-muted">Proje: {{ project.name }}</p>
+            </div>
+            <div class="card-body">
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle"></i> Test Senaryosu:</h6>
+                    <p class="mb-0">{{ prompt.content }}</p>
+                </div>
+
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.project_url.label(class="form-label") }}
+                        {{ form.project_url(class="form-control", value=project.url if project.url else '') }}
+                        {% for error in form.project_url.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Test edilecek web sitesinin URL'sini girin.</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button type="submit" class="btn btn-primary btn-lg w-100">
+                                <i class="fas fa-play"></i> Testi Çalıştır
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="{{ url_for('test.run_tests') }}" class="btn btn-secondary btn-lg w-100">
+                                <i class="fas fa-arrow-left"></i> Geri Dön
+                            </a>
+                        </div>
+                    </div>
+                </form>
+
+                {% if recent_results %}
+                <div class="mt-4">
+                    <h5><i class="fas fa-history"></i> Son Test Sonuçları</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Tarih</th>
+                                    <th>URL</th>
+                                    <th>Durum</th>
+                                    <th>Süre</th>
+                                    <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for result in recent_results %}
+                                <tr>
+                                    <td>{{ result.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                                    <td>
+                                        <a href="{{ result.project_url }}" target="_blank" class="text-decoration-none">
+                                            {{ result.project_url[:50] }}...
+                                        </a>
+                                    </td>
+                                    <td>
+                                        {% if result.status == 'success' %}
+                                            <span class="badge bg-success">Başarılı</span>
+                                        {% elif result.status == 'error' %}
+                                            <span class="badge bg-danger">Hatalı</span>
+                                        {% elif result.status == 'pending' %}
+                                            <span class="badge bg-warning">Beklemede</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ result.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if result.execution_time %}
+                                            {{ "%.2f"|format(result.execution_time) }}s
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('test.test_result', test_result_id=result.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> Detay
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

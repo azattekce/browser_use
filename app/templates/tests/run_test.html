@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Test Çalıştır - Browser Test{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-play-circle"></i> Test Çalıştır</h4>
+            </div>
+            <div class="card-body">
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                
+                {% if not projects %}
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-exclamation-triangle"></i> Test çalıştırmak için proje gerekli!</h6>
+                    <p class="mb-2">Henüz hiç projeniz bulunmuyor. Test çalıştırabilmek için:</p>
+                    <ol class="mb-3">
+                        <li>Önce bir proje oluşturun</li>
+                        <li>Projeye test prompt'ları ekleyin</li>
+                        <li>Ardından testlerinizi çalıştırın</li>
+                    </ol>
+                    <a href="{{ url_for('project.new_project') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> İlk Projenizi Oluşturun
+                    </a>
+                </div>
+                {% endif %}
+                
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.project_id.label(class="form-label") }}
+                        {{ form.project_id(class="form-control", id="project-select") }}
+                        {% for error in form.project_id.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Test edilecek projeyi seçin.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.prompt_id.label(class="form-label") }}
+                        {{ form.prompt_id(class="form-control", id="prompt-select") }}
+                        {% for error in form.prompt_id.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Çalıştırılacak test senaryosunu seçin.</div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> Test Hakkında:</h6>
+                        <ul class="mb-0">
+                            <li>Test başlatıldıktan sonra arka planda çalışacaktır</li>
+                            <li>Test durumunu "Test Geçmişi" sayfasından takip edebilirsiniz</li>
+                            <li>Test tamamlandığında sonucu görüntüleyebilirsiniz</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary btn-lg") }}
+                    </div>
+                </form>
+                
+                {% if projects %}
+                <div class="mt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">Mevcut Projeler</h5>
+                        <a href="{{ url_for('project.new_project') }}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-plus"></i> Yeni Proje Ekle
+                        </a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Proje</th>
+                                    <th>URL</th>
+                                    <th>Prompt Sayısı</th>
+                                    <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for project in projects %}
+                                <tr>
+                                    <td>{{ project.name }}</td>
+                                    <td><small>{{ project.url[:50] }}...</small></td>
+                                    <td><span class="badge bg-info">{{ project.test_prompts|length }}</span></td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('project.project_detail', project_id=project.id) }}" 
+                                               class="btn btn-sm btn-outline-primary" title="Prompt'ları Görüntüle">
+                                                <i class="fas fa-list"></i>
+                                            </a>
+                                            <a href="{{ url_for('test.new_test_prompt', project_id=project.id) }}" 
+                                               class="btn btn-sm btn-outline-success" title="Yeni Prompt Ekle">
+                                                <i class="fas fa-plus"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% else %}
+                <div class="mt-4 text-center">
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-exclamation-triangle"></i> Henüz proje bulunmuyor!</h6>
+                        <p class="mb-0">Test çalıştırmak için önce bir proje oluşturmanız gerekir.</p>
+                        <a href="{{ url_for('project.new_project') }}" class="btn btn-primary mt-2">
+                            <i class="fas fa-plus"></i> İlk Projenizi Ekleyin
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const projectSelect = document.getElementById('project-select');
+    const promptSelect = document.getElementById('prompt-select');
+    
+    projectSelect.addEventListener('change', function() {
+        const projectId = this.value;
+        
+        if (projectId && projectId != '0') {
+            // Loading state
+            promptSelect.innerHTML = '<option value="">Yükleniyor...</option>';
+            
+            fetch(`/tests/api/project/${projectId}/prompts`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    promptSelect.innerHTML = '<option value="0">Prompt seçin...</option>';
+                    
+                    if (data.length === 0) {
+                        promptSelect.innerHTML = '<option value="0">Bu projede prompt bulunmuyor</option>';
+                    } else {
+                        data.forEach(prompt => {
+                            const option = document.createElement('option');
+                            option.value = prompt.id;
+                            option.textContent = prompt.name;
+                            promptSelect.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Prompt\'lar yüklenirken hata:', error);
+                    promptSelect.innerHTML = '<option value="0">Prompt yüklenemedi - Tekrar deneyin</option>';
+                });
+        } else {
+            promptSelect.innerHTML = '<option value="0">Önce proje seçin...</option>';
+        }
+    });
+    
+    // Sayfa yüklendiğinde ilk projenin prompt'larını yükle
+    if (projectSelect.value) {
+        projectSelect.dispatchEvent(new Event('change'));
+    }
+});
+</script>
+{% endblock %}

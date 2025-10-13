@@ -1,0 +1,17 @@
+Belirtilen URL'yi ziyaret et: {url}
+ 1. adım: Siteye giriş yap (kullanıcı adı ve şifre gerekli olabilir) kullanıcı adı:jokercloudtstusr@opetonline.onmicrosoft.com şifre:"Baracuda.11"
+ 2. adım:Otobil menüsüne git.
+ 3. adım:BM Raporu menüsüne git.Menüyü sola çekmek için üsteki üç çizgili ikona tıkla.tarih 01.01.2025 seç ve ara.sonra excel olarak indir sonra gelen rapordaki IdunitCode tut sonra BM Montaj Raporu menusune tıkla ve cikaz koduna tutuğun IDunitCode yapıştır ve ara.Menüyü sağa çekmek için üsteki üç çizgili ikona tıkla. 
+ 4. adım:Hatalı Litre menüsüne git.Menüyü sola çekmek için üsteki üç çizgili ikona tıkla. 124453254 ID ile ara ve kayıt gelirse düzlet.Menüyü sağa çekmek için üsteki üç çizgili ikona tıkla.
+ 5. adım:Hatalı Tutar menüsüne git.Menüyü sola çekmek için üsteki üç çizgili ikona tıkla.  124453254 ID ile ara ve kayıt gelirse düzlet.Menüyü sağa çekmek için üsteki üç çizgili ikona tıkla.
+ 6. adım:Hatalı Birim fiyat menüsüne git.Menüyü sola çekmek için üsteki üç çizgili ikona tıkla.  124453254 ID ile ara ve kayıt gelirse düzlet.Menüyü sağa çekmek için üsteki üç çizgili ikona tıkla.
+ 7. adım:Plaka Transfer menüsüne git.Menüyü sola çekmek için üsteki üç çizgili ikona tıkla.  035BNZ66 plaka ile plakayı kontrol et.Gelen listeinin sağ köşedeki Transfer butununa tıkla açılan modalın içindeki yeni playaya "035BNZ65" gir ve kaydet.
+ 8. adım:Plaka Transfer menüsüne git.Menüyü sola çekmek için üsteki üç çizgili ikona tıkla.  035BNZ65 plaka ile plakayı kontrol et.Gelen listeinin sağ köşeddki Transfer butununa tıkla açılan modalın içindeki yeni playaya "035BNZ66" gir ve kaydet.Menüyü sağa çekmek için üsteki üç çizgili ikona tıkla.
+ 9. adım:Limit Kontrol menüsüne git.Menüyü sola çekmek için üsteki üç çizgili ikona tıkla. Filo kodu "108269" olarak gir, 16.04.2022-30.04.2022 tarihlerini seç ve ara sonra excele indir.Menüyü sağa çekmek için üsteki üç çizgili ikona tıkla.
+ 10. adım:Yakıt kart menüsüne git.
+ 11. adım:Kart Transfere git.Menüyü sola çekmek için üsteki üç çizgili ikona tıkla.  7000781909347197 kartını ara.  Firm Idx 82 gir.Kartları tarnsfer et. Confirmde tamam de.Menüyü sağa çekmek için üsteki üç çizgili ikona tıkla.
+ 12. adım:Satış iptal menüsüne git.Menüyü sola çekmek için üsteki üç çizgili ikona tıkla.  10136342 ID ile ara ve kayıt gelirse satış iptale modalı gelecek sonar iptal et.Menüyü sağa çekmek için üsteki üç çizgili ikona tıkla.
+ 13. adım:Portal Kullanıcıları menüsüne git.Menüyü sola çekmek için üsteki üç çizgili ikona tıkla.  Kullanıcı adı kstest gir.Düzlet menüsünde "905493896453" telefon numarasını gir ve güncelle.Menüyü sağa çekmek için üsteki üç çizgili ikona tıkla.
+ 14. adım:Yakıt kartı menüsünden dönme kontrol ekranına gir.Menüyü sola çekmek için üsteki üç çizgili ikona tıkla.  Başlangıç tarihi -5 gün gir.sırasıyla tabları kontrol et.Menüyü sağa çekmek için üsteki üç çizgili ikona tıkla.
+ 15. adım:Genel altında  Satış Kontrol menüsüne git.Menüyü sola çekmek için üsteki üç çizgili ikona tıkla.  01.08.2025-15.08.2025 tarihlerini seç ve ara sonucu excel ile al.Menüyü sağa çekmek için üsteki üç çizgili ikona tıkla.
+ 16. adım:Genel altında  Akaryakıt Fiyatları menüsüne git.Menüyü sola çekmek için üsteki üç çizgili ikona tıkla.  IĞDIR ilini seç sonra Karakoynlu ilçesini seç sonra 01.08.2025-15.08.2025 tarihlerini seç ve ara sonucu excel ile al.Menüyü sağa çekmek için üsteki üç çizgili ikona tıkla. 

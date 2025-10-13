@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block title %}Test Takibi - {{ test_result.id }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4><i class="fas fa-robot"></i> Test Takibi #{{ test_result.id }}</h4>
+                    <div>
+                        <button id="stopTestBtn" class="btn btn-danger" 
+                                {% if test_result.status != 'running' %}style="display: none;"{% endif %}>
+                            <i class="fas fa-stop"></i> Testi Durdur
+                        </button>
+                        <a href="{{ url_for('project.list_projects') }}" class="btn btn-secondary ms-2">
+                            <i class="fas fa-arrow-left"></i> Geri Dön
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Test Bilgileri -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-project-diagram"></i> Proje</h6>
+                            <p class="mb-2">{{ test_result.project.name }}</p>
+                            <small class="text-muted">{{ test_result.project.url }}</small>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-file-alt"></i> Test Promptu</h6>
+                            <p class="mb-2">{{ test_result.prompt.name }}</p>
+                            <small class="text-muted">{{ test_result.created_at.strftime('%d.%m.%Y %H:%M:%S') }}</small>
+                        </div>
+                    </div>
+
+                    <!-- Durum Göstergesi -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6><i class="fas fa-info-circle"></i> Test Durumu</h6>
+                            <div class="d-flex align-items-center mb-2">
+                                <span id="statusBadge" class="badge badge-lg me-2
+                                    {% if test_result.status == 'running' %}badge-primary
+                                    {% elif test_result.status == 'completed' %}badge-success
+                                    {% elif test_result.status == 'failed' %}badge-danger
+                                    {% elif test_result.status == 'stopped' %}badge-warning
+                                    {% endif %}">
+                                    <i class="fas fa-
+                                        {% if test_result.status == 'running' %}spinner fa-spin
+                                        {% elif test_result.status == 'completed' %}check
+                                        {% elif test_result.status == 'failed' %}times
+                                        {% elif test_result.status == 'stopped' %}hand-paper
+                                        {% endif %}"></i>
+                                    <span id="statusText">
+                                        {% if test_result.status == 'running' %}Çalışıyor
+                                        {% elif test_result.status == 'completed' %}Tamamlandı
+                                        {% elif test_result.status == 'failed' %}Başarısız
+                                        {% elif test_result.status == 'stopped' %}Durduruldu
+                                        {% endif %}
+                                    </span>
+                                </span>
+                                <span id="progressText" class="text-muted">
+                                    Adım <span id="currentStep">{{ test_result.current_step }}</span>
+                                    / <span id="totalSteps">{{ test_result.total_steps or '?' }}</span>
+                                </span>
+                            </div>
+                            
+                            <!-- Progress Bar -->
+                            <div class="progress mb-2" style="height: 6px;">
+                                <div id="progressBar" class="progress-bar" role="progressbar" 
+                                     style="width: {% if test_result.total_steps and test_result.total_steps > 0 %}{{ (test_result.current_step / test_result.total_steps * 100)|round }}{% else %}0{% endif %}%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gerçek Zamanlı Log Alanı -->
+                    <div class="row">
+                        <div class="col-12">
+                            <h6><i class="fas fa-terminal"></i> Test Adımları</h6>
+                            <div id="testOutput" class="card bg-dark text-light" style="height: 500px; overflow-y: auto;">
+                                <div class="card-body">
+                                    <div id="logContainer">
+                                        {% if test_result.running_details %}
+                                            {% for step in test_result.running_details %}
+                                                <div class="log-entry mb-2">
+                                                    <small class="text-muted">[{{ step.timestamp }}]</small>
+                                                    <span class="text-info">{{ step.message }}</span>
+                                                </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <div class="text-muted">Test başlatılıyor...</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sonuç Alanı -->
+                    {% if test_result.status in ['completed', 'failed', 'stopped'] %}
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h6><i class="fas fa-flag-checkered"></i> Test Sonucu</h6>
+                            {% if test_result.status == 'completed' %}
+                                <div class="alert alert-success">
+                                    <strong>Test başarıyla tamamlandı!</strong><br>
+                                    {{ test_result.result_text or 'Test işlemleri başarıyla gerçekleştirildi.' }}
+                                </div>
+                            {% elif test_result.status == 'failed' %}
+                                <div class="alert alert-danger">
+                                    <strong>Test başarısız!</strong><br>
+                                    {{ test_result.error_message or 'Bilinmeyen bir hata oluştu.' }}
+                                </div>
+                            {% elif test_result.status == 'stopped' %}
+                                <div class="alert alert-warning">
+                                    <strong>Test kullanıcı tarafından durduruldu.</strong><br>
+                                    Test {{ test_result.completed_at.strftime('%d.%m.%Y %H:%M:%S') }} tarihinde durduruldu.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const testId = {{ test_result.id }};
+    let eventSource = null;
+    
+    // Server-Sent Events bağlantısı
+    function connectSSE() {
+        if (eventSource) {
+            eventSource.close();
+        }
+        
+        eventSource = new EventSource('/tests/stream/' + testId);
+        
+        eventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            updateTestStatus(data);
+        };
+        
+        eventSource.onerror = function(event) {
+            console.error('SSE connection error:', event);
+            // 5 saniye sonra tekrar bağlanmaya çalış
+            setTimeout(connectSSE, 5000);
+        };
+        
+        eventSource.onopen = function(event) {
+            console.log('SSE connection opened');
+        };
+    }
+    
+    // Test durumunu güncelle
+    function updateTestStatus(data) {
+        // Status badge güncelle
+        const statusBadge = document.getElementById('statusBadge');
+        const statusText = document.getElementById('statusText');
+        
+        statusBadge.className = 'badge badge-lg me-2';
+        
+        if (data.status === 'running') {
+            statusBadge.classList.add('badge-primary');
+            statusText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Çalışıyor';
+        } else if (data.status === 'completed') {
+            statusBadge.classList.add('badge-success');
+            statusText.innerHTML = '<i class="fas fa-check"></i> Tamamlandı';
+        } else if (data.status === 'failed') {
+            statusBadge.classList.add('badge-danger');
+            statusText.innerHTML = '<i class="fas fa-times"></i> Başarısız';
+        } else if (data.status === 'stopped') {
+            statusBadge.classList.add('badge-warning');
+            statusText.innerHTML = '<i class="fas fa-hand-paper"></i> Durduruldu';
+        }
+        
+        // Progress güncelle
+        if (data.current_step !== undefined) {
+            document.getElementById('currentStep').textContent = data.current_step;
+        }
+        if (data.total_steps !== undefined && data.total_steps > 0) {
+            document.getElementById('totalSteps').textContent = data.total_steps;
+            const progress = (data.current_step / data.total_steps * 100);
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+        
+        // Yeni log mesajları ekle
+        if (data.new_logs && data.new_logs.length > 0) {
+            const logContainer = document.getElementById('logContainer');
+            data.new_logs.forEach(function(log) {
+                const logEntry = document.createElement('div');
+                logEntry.className = 'log-entry mb-2';
+                logEntry.innerHTML = '<small class="text-muted">[' + log.timestamp + ']</small> ' +
+                                   '<span class="text-info">' + escapeHtml(log.message) + '</span>';
+                logContainer.appendChild(logEntry);
+            });
+            
+            // Scroll to bottom
+            const testOutput = document.getElementById('testOutput');
+            testOutput.scrollTop = testOutput.scrollHeight;
+        }
+        
+        // Test durumuna göre stop button görünürlüğünü ayarla
+        const stopBtn = document.getElementById('stopTestBtn');
+        if (stopBtn) {
+            if (data.status === 'running') {
+                stopBtn.style.display = 'inline-block';
+                stopBtn.disabled = false;
+                stopBtn.innerHTML = '<i class="fas fa-stop"></i> Testi Durdur';
+            } else {
+                stopBtn.style.display = 'none';
+            }
+        }
+        
+        // Test bittiğinde SSE'yi kapat
+        if (data.status !== 'running') {
+            if (eventSource) {
+                eventSource.close();
+            }
+        }
+    }
+    
+    // HTML escape fonksiyonu
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Stop test butonu
+    const stopBtn = document.getElementById('stopTestBtn');
+    console.log('Stop button found:', !!stopBtn);
+    console.log('Test ID:', testId);
+    
+    if (stopBtn) {
+        console.log('Adding click listener to stop button');
+        stopBtn.addEventListener('click', function() {
+            console.log('Stop button clicked');
+            if (confirm('Testi durdurmak istediğinizden emin misiniz?')) {
+                console.log('User confirmed stop request');
+                
+                fetch('/tests/stop/' + testId, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
+                    }
+                })
+                .then(response => {
+                    console.log('Stop response status:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Stop response data:', data);
+                    if (data.success) {
+                        stopBtn.disabled = true;
+                        stopBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Durduruluyor...';
+                        console.log('Stop request successful');
+                    } else {
+                        alert('Test durdurulurken hata oluştu: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Stop request error:', error);
+                    alert('Test durdurulurken hata oluştu.');
+                });
+            }
+        });
+    } else {
+        console.log('Stop button not found on page');
+    }
+    
+    // SSE bağlantısını başlat (sadece test çalışıyorsa)
+    {% if test_result.status == 'running' %}
+        connectSSE();
+    {% endif %}
+    
+    // Sayfa kapatılınca SSE bağlantısını kapat
+    window.addEventListener('beforeunload', function() {
+        if (eventSource) {
+            eventSource.close();
+        }
+    });
+});
+</script>
+
+<style>
+.badge-lg {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+}
+
+.log-entry {
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+#testOutput {
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+}
+
+#testOutput .card-body {
+    padding: 1rem;
+}
+</style>
+{% endblock %}

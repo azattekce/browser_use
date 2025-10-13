@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Projeler - Browser Test{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-project-diagram"></i> Projeler</h2>
+    <a href="{{ url_for('project.new_project') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Yeni Proje Ekle
+    </a>
+</div>
+
+{% if projects %}
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Proje Adı</th>
+                <th>URL</th>
+                <th>Açıklama</th>
+                <th>Sahibi</th>
+                <th>Oluşturulma Tarihi</th>
+                <th>Prompt Sayısı</th>
+                <th>İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for project in projects %}
+            <tr>
+                <td>
+                    <strong>{{ project.name }}</strong>
+                </td>
+                <td>
+                    <a href="{{ project.url }}" target="_blank" class="text-decoration-none">
+                        {{ project.url[:50] }}{% if project.url|length > 50 %}...{% endif %}
+                        <i class="fas fa-external-link-alt ms-1"></i>
+                    </a>
+                </td>
+                <td>{{ project.description[:100] if project.description else '-' }}{% if project.description and project.description|length > 100 %}...{% endif %}</td>
+                <td>
+                    {{ project.owner.username }}
+                    {% if project.owner.is_admin %}
+                        <span class="badge bg-warning">Admin</span>
+                    {% endif %}
+                </td>
+                <td>{{ project.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                <td>
+                    <span class="badge bg-info">{{ project.test_prompts|length }}</span>
+                </td>
+                <td>
+                    <div class="btn-group" role="group">
+                        <a href="{{ url_for('project.project_detail', project_id=project.id) }}" 
+                           class="btn btn-sm btn-info" title="Prompt'ları Görüntüle">
+                            <i class="fas fa-list"></i>
+                        </a>
+                        {% if current_user.is_admin or project.user_id == current_user.id %}
+                            <a href="{{ url_for('project.edit_project', project_id=project.id) }}" 
+                               class="btn btn-sm btn-warning" title="Düzenle">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="POST" action="{{ url_for('project.delete_project', project_id=project.id) }}" 
+                                  style="display: inline;" onsubmit="return confirm('Bu projeyi silmek istediğinizden emin misiniz?')">
+                                <button type="submit" class="btn btn-sm btn-danger" title="Sil">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="text-center py-5">
+    <div class="mb-4">
+        <i class="fas fa-project-diagram fa-5x text-muted"></i>
+    </div>
+    <h4 class="text-muted">Henüz proje bulunmuyor</h4>
+    <p class="text-muted">Başlamak için ilk projenizi oluşturun.</p>
+    <a href="{{ url_for('project.new_project') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> İlk Projenizi Ekleyin
+    </a>
+</div>
+{% endif %}
+{% endblock %}

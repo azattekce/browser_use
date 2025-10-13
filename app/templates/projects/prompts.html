@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - Prompt'lar{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-file-alt"></i> {{ project.name }} - Test Prompt'ları</h2>
+        <p class="text-muted">
+            <i class="fas fa-link"></i> {{ project.url }}
+        </p>
+    </div>
+    <div>
+        <a href="{{ url_for('test.new_test_prompt', project_id=project.id) }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Yeni Prompt Ekle
+        </a>
+        <a href="{{ url_for('project.list_projects') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Projelere Dön
+        </a>
+    </div>
+</div>
+
+{% if prompts %}
+<div class="row">
+    {% for prompt in prompts %}
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">{{ prompt.name }}</h6>
+                <small class="text-muted">{{ prompt.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
+            </div>
+            <div class="card-body">
+                <div class="prompt-preview" style="max-height: 150px; overflow-y: auto;">
+                    <pre class="mb-0" style="white-space: pre-wrap; font-size: 0.9rem;">{{ prompt.content[:200] }}{% if prompt.content|length > 200 %}...{% endif %}</pre>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="btn-group w-100" role="group">
+                    <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" 
+                            data-bs-target="#promptModal{{ prompt.id }}">
+                        <i class="fas fa-eye"></i> Görüntüle
+                    </button>
+                    {% if current_user.is_admin or project.user_id == current_user.id %}
+                        <a href="{{ url_for('test.edit_test_prompt', prompt_id=prompt.id) }}" 
+                           class="btn btn-sm btn-warning">
+                            <i class="fas fa-edit"></i> Düzenle
+                        </a>
+                        <form method="POST" action="{{ url_for('test.delete_test_prompt', prompt_id=prompt.id) }}" 
+                              style="display: inline;" onsubmit="return confirm('Bu promptu silmek istediğinizden emin misiniz?')">
+                            <button type="submit" class="btn btn-sm btn-danger">
+                                <i class="fas fa-trash"></i> Sil
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for viewing full prompt -->
+    <div class="modal fade" id="promptModal{{ prompt.id }}" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ prompt.name }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2">
+                        <small class="text-muted">
+                            <i class="fas fa-calendar"></i> Oluşturulma: {{ prompt.created_at.strftime('%d.%m.%Y %H:%M') }}
+                            {% if prompt.updated_at != prompt.created_at %}
+                                | <i class="fas fa-edit"></i> Güncellenme: {{ prompt.updated_at.strftime('%d.%m.%Y %H:%M') }}
+                            {% endif %}
+                        </small>
+                    </div>
+                    <pre style="white-space: pre-wrap; background: #f8f9fa; padding: 1rem; border-radius: 0.25rem;">{{ prompt.content }}</pre>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                    {% if current_user.is_admin or project.user_id == current_user.id %}
+                        <a href="{{ url_for('test.edit_test_prompt', prompt_id=prompt.id) }}" class="btn btn-warning">
+                            <i class="fas fa-edit"></i> Düzenle
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <div class="mb-4">
+        <i class="fas fa-file-alt fa-5x text-muted"></i>
+    </div>
+    <h4 class="text-muted">Bu proje için henüz test promptu bulunmuyor</h4>
+    <p class="text-muted">Test senaryolarınızı tanımlamak için ilk promptunuzu oluşturun.</p>
+    <a href="{{ url_for('test.new_test_prompt', project_id=project.id) }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> İlk Promptunuzu Ekleyin
+    </a>
+</div>
+{% endif %}
+
+<div class="mt-4">
+    <div class="alert alert-info">
+        <h6><i class="fas fa-info-circle"></i> Test Prompt'ları Hakkında:</h6>
+        <ul class="mb-0">
+            <li>Prompt'larda <code>{url}</code> parametresini kullanarak proje URL'sini dinamik olarak ekleyebilirsiniz.</li>
+            <li>Örnek: "Şu adrese git: {url} ve ana sayfa yüklendiğini kontrol et."</li>
+            <li>Bu prompt'lar browser-use aracı tarafından çalıştırılacaktır.</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

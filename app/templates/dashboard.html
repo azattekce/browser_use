@@ -1,0 +1,430 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Browser Test{% endblock %}
+
+{% block content %}
+<!-- Welcome Header -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="bg-primary text-white p-4 rounded">
+            <h1 class="mb-2"><i class="fas fa-robot"></i> Hoş Geldiniz, {{ current_user.username }}!</h1>
+            <p class="mb-0 lead">Browser-Use AI ile otomatik web testi yapın. Gerçek browser automation gücünü deneyimleyin!</p>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="card-title">{{ total_projects }}</h3>
+                        <p class="card-text">Toplam Proje</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-project-diagram fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+            <a href="{{ url_for('project.list_projects') }}" class="card-footer text-white text-decoration-none">
+                <small>Tüm Projeleri Gör <i class="fas fa-arrow-right"></i></small>
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="card-title">{{ successful_tests }}</h3>
+                        <p class="card-text">Başarılı Test (30 gün)</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+            <a href="{{ url_for('project.list_projects') }}" class="card-footer text-white text-decoration-none">
+                <small>Test Geçmişi <i class="fas fa-arrow-right"></i></small>
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-warning text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="card-title">{{ running_tests }}</h3>
+                        <p class="card-text">Çalışan Test</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-spinner fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+            <a href="{{ url_for('project.list_projects') }}" class="card-footer text-white text-decoration-none">
+                <small>Aktif Testler <i class="fas fa-arrow-right"></i></small>
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-info text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="card-title"><i class="fas fa-robot"></i></h3>
+                        <p class="card-text">Browser-Use AI</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-magic fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+            <a href="{{ url_for('project.new_project') }}" class="card-footer text-white text-decoration-none">
+                <small>Yeni Test Başlat <i class="fas fa-arrow-right"></i></small>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Tests Section -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history"></i> Son Test Sonuçları</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_tests %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Proje</th>
+                                <th>Test</th>
+                                <th>Durum</th>
+                                <th>Tarih</th>
+                                <th>İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for test in recent_tests %}
+                            <tr>
+                                <td>
+                                    <i class="fas fa-project-diagram text-primary"></i>
+                                    {{ test.prompt.project.name }}
+                                </td>
+                                <td>{{ test.prompt.title }}</td>
+                                <td>
+                                    {% if test.status == 'completed' %}
+                                        <span class="badge bg-success">Tamamlandı</span>
+                                    {% elif test.status == 'running' %}
+                                        <span class="badge bg-warning">Çalışıyor</span>
+                                    {% elif test.status == 'failed' %}
+                                        <span class="badge bg-danger">Başarısız</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ test.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ test.created_at.strftime('%d.%m.%Y %H:%M') if test.created_at else '-' }}</td>
+                                <td>
+                                    <a href="{{ url_for('test.test_result', test_result_id=test.id) }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> Görüntüle
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Henüz test sonucu bulunmuyor</h5>
+                    <p class="text-muted">İlk testinizi çalıştırarak başlayın!</p>
+                    <a href="{{ url_for('project.new_project') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Yeni Proje Oluştur
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-bolt"></i> Hızlı İşlemler</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="d-grid">
+                            <a href="{{ url_for('project.new_project') }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-plus-circle"></i><br>
+                                <small>Yeni Proje Oluştur</small>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="d-grid">
+                            <a href="{{ url_for('project.list_projects') }}" class="btn btn-success btn-lg">
+                                <i class="fas fa-play-circle"></i><br>
+                                <small>Test Çalıştır</small>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="d-grid">
+                            <a href="{{ url_for('project.list_projects') }}" class="btn btn-info btn-lg">
+                                <i class="fas fa-list"></i><br>
+                                <small>Projelerim</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <div class="col-md-3">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Test Promptları</h6>
+                        <h3 class="mb-0">{{ prompts_count or 0 }}</h3>
+                    </div>
+                    <div>
+                        <i class="fas fa-file-alt fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-success border-0">
+                <small><i class="fas fa-arrow-up"></i> Hazır prompt'lar</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card bg-warning text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Çalışan Testler</h6>
+                        <h3 class="mb-0">{{ running_tests or 0 }}</h3>
+                    </div>
+                    <div>
+                        <i class="fas fa-spinner fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-warning border-0">
+                <small><i class="fas fa-clock"></i> Aktif testler</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card bg-info text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Başarılı Testler</h6>
+                        <h3 class="mb-0">{{ successful_tests or 0 }}</h3>
+                    </div>
+                    <div>
+                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-info border-0">
+                <small><i class="fas fa-thumbs-up"></i> Tamamlanan testler</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Son Test Sonuçları -->
+<div class="row mt-5">
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-history text-primary"></i> Son Test Sonuçları</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_tests %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Proje</th>
+                                <th>Test</th>
+                                <th>Durum</th>
+                                <th>Tarih</th>
+                                <th>İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for test in recent_tests %}
+                            <tr>
+                                <td>
+                                    <strong class="text-primary">{{ test.project.name }}</strong>
+                                </td>
+                                <td>{{ test.prompt.name }}</td>
+                                <td>
+                                    {% if test.status == 'running' %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="fas fa-spinner fa-spin"></i> Çalışıyor
+                                        </span>
+                                    {% elif test.status == 'completed' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check"></i> Tamamlandı
+                                        </span>
+                                    {% elif test.status == 'failed' %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-times"></i> Başarısız
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-clock"></i> Bekliyor
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        {{ test.created_at.strftime('%d.%m.%Y') }}<br>
+                                        {{ test.created_at.strftime('%H:%M') }}
+                                    </small>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('test.test_result', test_result_id=test.id) }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-clipboard-list fa-4x text-muted mb-3"></i>
+                    <h6 class="text-muted">Henüz test sonucu bulunmuyor</h6>
+                    <p class="text-muted small">İlk testinizi çalıştırarak başlayın!</p>
+                    <a href="{{ url_for('project.list_projects') }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-play"></i> Test Başlat
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sistem Durumu -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="fas fa-robot"></i> Browser-Use AI</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <span class="badge bg-success mb-2">
+                        <i class="fas fa-check-circle"></i> Aktif
+                    </span>
+                    <p class="small mb-3">AI destekli web test otomasyonu çalışıyor</p>
+                </div>
+                
+                <h6 class="text-muted mb-2">Özellikler:</h6>
+                <ul class="list-unstyled small">
+                    <li class="mb-1"><i class="fas fa-check text-success"></i> Gerçek browser automation</li>
+                    <li class="mb-1"><i class="fas fa-check text-success"></i> Görsel element tanıma</li>
+                    <li class="mb-1"><i class="fas fa-check text-success"></i> AI destekli navigasyon</li>
+                    <li class="mb-1"><i class="fas fa-check text-success"></i> Otomatik hata tespiti</li>
+                </ul>
+                
+                <hr>
+                <div class="d-grid">
+                    <a href="{{ url_for('project.new_project') }}" class="btn btn-success btn-sm">
+                        <i class="fas fa-plus"></i> Yeni Test Başlat
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Başlangıç Rehberi -->
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card border-primary">
+            <div class="card-header bg-gradient-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-graduation-cap"></i> Başlangıç Rehberi</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="text-center h-100">
+                            <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                                 style="width: 60px; height: 60px;">
+                                <i class="fas fa-plus fa-2x text-white"></i>
+                            </div>
+                            <h6 class="fw-bold">1. Proje Oluştur</h6>
+                            <p class="text-muted small mb-3">
+                                Test etmek istediğiniz web sitesi için bir proje oluşturun ve temel bilgileri girin.
+                            </p>
+                            <a href="{{ url_for('project.new_project') }}" 
+                               class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus-circle"></i> Proje Ekle
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center h-100">
+                            <div class="bg-success rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                                 style="width: 60px; height: 60px;">
+                                <i class="fas fa-edit fa-2x text-white"></i>
+                            </div>
+                            <h6 class="fw-bold">2. Test Prompt Ekle</h6>
+                            <p class="text-muted small mb-3">
+                                Projenize test adımlarını tanımlayan AI prompt'ları ekleyin.
+                            </p>
+                            <a href="{{ url_for('project.list_projects') }}" 
+                               class="btn btn-success btn-sm">
+                                <i class="fas fa-file-text"></i> Prompt Ekle
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center h-100">
+                            <div class="bg-warning rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                                 style="width: 60px; height: 60px;">
+                                <i class="fas fa-play fa-2x text-white"></i>
+                            </div>
+                            <h6 class="fw-bold">3. Test Çalıştır</h6>
+                            <p class="text-muted small mb-3">
+                                Browser-Use AI ile testlerinizi otomatik olarak çalıştırın.
+                            </p>
+                            <a href="{{ url_for('project.list_projects') }}" 
+                               class="btn btn-warning btn-sm">
+                                <i class="fas fa-rocket"></i> Test Başlat
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

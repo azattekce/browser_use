@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Test Sonucu #{{ test_result.id }} - Browser Test{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-chart-line"></i> Test Sonucu #{{ test_result.id }}</h2>
+            <a href="{{ url_for('project.list_projects') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Projeler
+            </a>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5 class="mb-0">{{ test_result.project.name }}</h5>
+                        <small class="text-muted">{{ test_result.project.url }}</small>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        {% if test_result.status == 'running' %}
+                            <span class="badge bg-warning fs-6">
+                                <i class="fas fa-spinner fa-spin"></i> Test Çalışıyor
+                            </span>
+                        {% elif test_result.status == 'completed' %}
+                            <span class="badge bg-success fs-6">
+                                <i class="fas fa-check"></i> Test Tamamlandı
+                            </span>
+                        {% elif test_result.status == 'failed' %}
+                            <span class="badge bg-danger fs-6">
+                                <i class="fas fa-times"></i> Test Başarısız
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-file-alt"></i> Test Promptu</h6>
+                        <p><strong>{{ test_result.prompt.name }}</strong></p>
+                        
+                        <h6><i class="fas fa-user"></i> Test Eden</h6>
+                        <p>{{ test_result.user.username }}
+                        {% if test_result.user.is_admin %}
+                            <span class="badge bg-warning">Admin</span>
+                        {% endif %}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-clock"></i> Zaman Bilgileri</h6>
+                        <p><strong>Başlama:</strong> {{ test_result.created_at.strftime('%d.%m.%Y %H:%M:%S') }}</p>
+                        {% if test_result.completed_at %}
+                            <p><strong>Tamamlanma:</strong> {{ test_result.completed_at.strftime('%d.%m.%Y %H:%M:%S') }}</p>
+                            <p><strong>Süre:</strong> 
+                                {% set duration = (test_result.completed_at - test_result.created_at).total_seconds() %}
+                                {% if duration < 60 %}
+                                    {{ "%.0f" | format(duration) }} saniye
+                                {% else %}
+                                    {{ "%.1f" | format(duration / 60) }} dakika
+                                {% endif %}
+                            </p>
+                        {% else %}
+                            <p><strong>Durum:</strong> Test devam ediyor...</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <h6><i class="fas fa-code"></i> Kullanılan Prompt</h6>
+                <div class="alert alert-light">
+                    <pre style="white-space: pre-wrap; margin: 0;">{{ test_result.prompt.content }}</pre>
+                </div>
+                
+                {% if test_result.status == 'completed' and test_result.result_text %}
+                    <h6><i class="fas fa-check-circle"></i> Test Sonucu</h6>
+                    <div class="alert alert-success">
+                        <pre style="white-space: pre-wrap; margin: 0;">{{ test_result.result_text }}</pre>
+                    </div>
+                {% elif test_result.status == 'failed' and test_result.error_message %}
+                    <h6><i class="fas fa-exclamation-triangle"></i> Hata Mesajı</h6>
+                    <div class="alert alert-danger">
+                        <pre style="white-space: pre-wrap; margin: 0;">{{ test_result.error_message }}</pre>
+                    </div>
+                {% elif test_result.status == 'running' %}
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> Test Durumu</h6>
+                        <p class="mb-0">Test şu anda çalışıyor. Lütfen bekleyin...</p>
+                        <div class="progress mt-2">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 100%" 
+                                 aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <div class="mt-4">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h6><i class="fas fa-tools"></i> Test Bilgileri</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <tr>
+                                        <th width="200">Test ID:</th>
+                                        <td>{{ test_result.id }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Proje ID:</th>
+                                        <td>{{ test_result.project_id }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Prompt ID:</th>
+                                        <td>{{ test_result.prompt_id }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Test URL:</th>
+                                        <td><a href="{{ test_result.project.url }}" target="_blank">{{ test_result.project.url }}</a></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if test_result.status == 'running' %}
+                <div class="mt-3">
+                    <button class="btn btn-info" onclick="location.reload()">
+                        <i class="fas fa-sync"></i> Durumu Yenile
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Çalışan test için otomatik yenileme
+document.addEventListener('DOMContentLoaded', function() {
+    const status = '{{ test_result.status }}';
+    if (status === 'running') {
+        // 15 saniyede bir sayfayı yenile
+        setTimeout(function() {
+            location.reload();
+        }, 15000);
+    }
+});
+</script>
+{% endblock %}
