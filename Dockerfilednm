@@ -41,6 +41,8 @@ ENV FLASK_APP=run.py
 ENV PYTHONPATH=/app
 EXPOSE 5005 5900 6080
 
+
+
 # Başlatma scripti
 COPY start-dnm.sh /start-dnm.sh
 RUN chmod +x /start-dnm.sh
@@ -51,5 +53,8 @@ RUN useradd -ms /bin/bash devuser && \
 
 USER devuser
 WORKDIR /app
+
+
+
 
 CMD ["/start-dnm.sh"]

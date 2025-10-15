@@ -12,7 +12,13 @@ RUN apt-get update && apt-get install -y \
     fluxbox \
     x11-utils \
     procps \
+    python3-pip \
     && rm -rf /var/lib/apt/lists/*
+
+# NoVNC ve websockify kurulumu
+RUN wget -qO- https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.tar.gz | tar xz -C /opt \
+    && mv /opt/noVNC-1.4.0 /opt/novnc \
+    && pip install websockify
 
 # Google Chrome'u yükle (modern GPG key yöntemi)
 RUN wget -q -O /tmp/google-chrome-key.gpg https://dl.google.com/linux/linux_signing_key.pub \
@@ -86,8 +92,19 @@ fluxbox &\n\
 FLUXBOX_PID=$!\n\
 \n\
 # VNC server başlat (background)\n\
+echo "Starting VNC server..."\n\
 x11vnc -display :99 -nopw -listen localhost -xkb -ncache 10 -ncache_cr -forever &\n\
 VNC_PID=$!\n\
+sleep 2\n\
+\n\
+# NoVNC WebSocket proxy başlat\n\
+echo "Starting noVNC WebSocket proxy..."\n\
+websockify --web /opt/novnc 6080 localhost:5900 &\n\
+WEBSOCKIFY_PID=$!\n\
+sleep 2\n\
+\n\
+echo "VNC Server started on port 5900"\n\
+echo "noVNC Web interface: http://localhost:6080/vnc.html"\n\
 \n\
 # X11 bağlantısını test et\n\
 timeout 10 sh -c "until xdpyinfo -display :99 >/dev/null 2>&1; do sleep 1; done" || echo "X11 warning: Display may not be ready"\n\
@@ -111,8 +128,12 @@ cd /app\n\
 python run.py\n\
 \n\
 # Cleanup on exit\n\
-trap "kill $XVFB_PID $FLUXBOX_PID $VNC_PID 2>/dev/null || true" EXIT\n\
+trap "kill $XVFB_PID $FLUXBOX_PID $VNC_PID $WEBSOCKIFY_PID 2>/dev/null || true" EXIT\n\
 ' > /app/start.sh && chmod +x /app/start.sh
+
+# Duplicate removed - already installed above
+
+
 
 # Uygulamayı başlat
 CMD ["/app/start.sh"]
