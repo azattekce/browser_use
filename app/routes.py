@@ -582,6 +582,51 @@ Sonra aşağıdaki adımları takip et:
         # Docker'da VNC ile görüntülenebilir olsun
         use_headless = False if is_docker else config['headless']
         
+        # Anti-bot tespiti için Chrome seçenekleri
+        base_chrome_options = [
+            "--no-sandbox",
+            "--disable-dev-shm-usage", 
+            "--disable-gpu",
+            "--disable-blink-features=AutomationControlled",
+            "--disable-extensions-file-access-check",
+            "--disable-extensions-except",
+            "--disable-plugins-discovery",
+            "--disable-web-security",
+            "--disable-features=VizDisplayCompositor,TranslateUI",
+            "--disable-ipc-flooding-protection",
+            "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
+            "--exclude-switches=enable-automation",
+            "--disable-blink-features=AutomationControlled",
+            "--useAutomationExtension=false",
+            "--disable-dev-shm-usage",
+            "--no-first-run",
+            "--disable-default-apps",
+            "--disable-popup-blocking",
+            "--disable-translate",
+            "--disable-background-timer-throttling",
+            "--disable-backgrounding-occluded-windows",
+            "--disable-renderer-backgrounding",
+            "--disable-features=TranslateUI,BlinkGenPropertyTrees",
+            "--disable-component-extensions-with-background-pages",
+            "--no-default-browser-check",
+            "--mute-audio"
+        ]
+        
+        # Chrome prefs (anti-detection)
+        chrome_prefs = {
+            "profile.default_content_setting_values.notifications": 2,
+            "profile.default_content_settings.popups": 0,
+            "profile.managed_default_content_settings.images": 1,
+            "profile.password_manager_enabled": False,
+            "credentials_enable_service": False,
+            "profile.password_manager_leak_detection": False,
+            "autofill.profile_enabled": False,
+            "autofill.credit_card_enabled": False,
+            "profile.default_content_setting_values.geolocation": 2,
+            "profile.default_content_setting_values.media_stream_camera": 2,
+            "profile.default_content_setting_values.media_stream_mic": 2
+        }
+
         browser_config = {
             "headless": use_headless,
             "window_size": (config['window_width'], config['window_height']),
@@ -590,13 +635,13 @@ Sonra aşağıdaki adımları takip et:
             "explicit_wait": config['explicit_wait'],
             "disable_images": False,
             "disable_javascript": False,
-            "chrome_options": [
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--disable-web-security",
-                "--disable-features=VizDisplayCompositor"
-            ]
+            "chrome_options": base_chrome_options,
+            "chrome_prefs": chrome_prefs,
+            "chrome_experimental_options": {
+                "useAutomationExtension": False,
+                "excludeSwitches": ["enable-automation"],
+                "prefs": chrome_prefs
+            }
         }
         
         # Docker'da ek Chrome seçenekleri ekle
@@ -606,11 +651,18 @@ Sonra aşağıdaki adımları takip et:
                 "--no-first-run",
                 "--disable-default-apps",
                 "--disable-infobars",
-                "--window-size=1920,1080"
+                "--window-size=1920,1080",
+                "--remote-debugging-port=0",
+                "--disable-background-timer-throttling",
+                "--disable-backgrounding-occluded-windows",
+                "--disable-renderer-backgrounding"
             ])
         else:
             # Yerel çalıştırmada maximize et
-            browser_config["chrome_options"].append("--start-maximized")
+            browser_config["chrome_options"].extend([
+                "--start-maximized",
+                "--remote-debugging-port=0"
+            ])
         
         log_step(f"⚙️ Browser Config: {browser_config}")
         
@@ -675,13 +727,30 @@ Sonra aşağıdaki adımları takip et:
         
         log_step("🌐 Browser açılıyor ve test başlatılıyor...")
         log_step("🤖 Browser-use AI Agent devreye giriyor...")
+        log_step("🛡️ Microsoft bot tespitine karşı önlemler aktif!")
         
         # GERÇEK BROWSER AUTOMATION - Browser açılacak ve otomatik test yapılacak!
         log_step("🚀 GERÇEK BROWSER AUTOMATION BAŞLIYOR - Browser açılıyor...")
-        log_step(f"⚠️ Bu aşamada tarayıcı penceresi açılacak! Headless: {config['headless']}")
+        log_step(f"⚠️ Bu aşamada tarayıcı penceresi açılacak! Headless: {use_headless}")
         log_step(f"🌐 Ziyaret edilecek URL: {project_url}")
         log_step("📋 Agent task preview:")
         log_step(formatted_prompt[:200] + "...")
+        
+        # Microsoft siteler için özel talimatlar ekle
+        if 'microsoft' in project_url.lower() or 'outlook' in project_url.lower() or 'office' in project_url.lower():
+            log_step("🔍 Microsoft sitesi tespit edildi - özel önlemler uygulanıyor...")
+            enhanced_prompt = f"""
+ÖNEMLI: Bu bir Microsoft sitesi. Bot tespitini engellemek için:
+1. Sayfayı yükledikten sonra 3-5 saniye bekle
+2. Fare hareketlerini doğal yap, aniden tıklama
+3. Eğer 'You cannot access this right now' hatası alırsan, sayfayı yenile ve tekrar dene
+4. Giriş yapmaya çalışırken human-like davran
+5. CAPTCHA veya güvenlik kontrolü varsa, bunları rapor et
+
+Orijinal görev:
+{formatted_prompt}
+"""
+            formatted_prompt = enhanced_prompt
         
         # Gerçek browser automation çalıştır
         # Browser-use async çağrısı
