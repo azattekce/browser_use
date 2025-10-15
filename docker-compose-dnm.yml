@@ -1,0 +1,14 @@
+services:
+  browser-test-app:
+    build:
+      context: .
+      dockerfile: Dockerfilednm
+    container_name: browser-test-app-dnm
+    ports:
+      - "5005:5005"   # Flask uygulaması
+      - "5900:5900"   # VNC Viewer
+      - "6080:6080"   # noVNC (isteğe bağlı)
+    stdin_open: true
+    tty: true
+    environment:
+      - DISPLAY=:0

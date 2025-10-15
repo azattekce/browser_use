@@ -579,7 +579,8 @@ Sonra aşağıdaki adımları takip et:
         
         # Browser config - Docker destekli
         # Headless modunu Docker durumuna göre ayarla
-        use_headless = config['headless'] if not is_docker else True
+        # Docker'da VNC ile görüntülenebilir olsun
+        use_headless = False if is_docker else config['headless']
         
         browser_config = {
             "headless": use_headless,

@@ -3,6 +3,8 @@ services:
     build: .
     ports:
       - "5001:5001"
+      - "5900:5900"  # VNC port
+      - "6080:6080"  # noVNC web interface
     env_file:
       - .env
     volumes:
@@ -12,7 +14,7 @@ services:
       - FLASK_ENV=production
       - SECRET_KEY=production-secret-key-change-me
       - DATABASE_URL=sqlite:////app/instance/browser_test.db
-      - HEADLESS=True
+      - HEADLESS=false
       - PYTHONPATH=/app
       - DISPLAY=:99
       - DOCKER_USER=docker_admin

@@ -50,6 +50,7 @@ RUN mkdir -p /app/logs && chmod 755 /app/logs
 
 # Port'u belirle
 EXPOSE 5001
+EXPOSE 5002
 
 # Çevre değişkenlerini ayarla
 ENV FLASK_APP=run.py
@@ -84,6 +85,10 @@ sleep 3\n\
 fluxbox &\n\
 FLUXBOX_PID=$!\n\
 \n\
+# VNC server başlat (background)\n\
+x11vnc -display :99 -nopw -listen localhost -xkb -ncache 10 -ncache_cr -forever &\n\
+VNC_PID=$!\n\
+\n\
 # X11 bağlantısını test et\n\
 timeout 10 sh -c "until xdpyinfo -display :99 >/dev/null 2>&1; do sleep 1; done" || echo "X11 warning: Display may not be ready"\n\
 \n\
@@ -97,12 +102,16 @@ if [ ! -f /app/instance/browser_test.db ]; then\n\
     chmod 664 /app/instance/browser_test.db\n\
 fi\n\
 \n\
+echo "VNC Server başlatıldı - Port: 5900"\n\
+echo "VNC ile bağlanmak için: localhost:5900"\n\
+echo "Browser görünümü için VNC client kullanın"\n\
+\n\
 echo "Starting Flask application..."\n\
 cd /app\n\
 python run.py\n\
 \n\
 # Cleanup on exit\n\
-trap "kill $XVFB_PID $FLUXBOX_PID 2>/dev/null || true" EXIT\n\
+trap "kill $XVFB_PID $FLUXBOX_PID $VNC_PID 2>/dev/null || true" EXIT\n\
 ' > /app/start.sh && chmod +x /app/start.sh
 
 # Uygulamayı başlat
