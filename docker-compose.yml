@@ -1,18 +1,15 @@
 services:
   browser-test-app:
     build: .
-    ports:
-      - "5001:5001"
-      - "5900:5900"  # VNC port
-      - "6080:6080"  # noVNC web interface
+    network_mode: "host"  # Host network kullan - Microsoft bypass için
     env_file:
       - .env
     volumes:
       - browser_test_instance:/app/instance:rw
       - browser_test_logs:/app/logs:rw
     environment:
-      - FLASK_ENV=production
-      - SECRET_KEY=production-secret-key-change-me
+      - FLASK_ENV=development
+      - SECRET_KEY=development-secret-key-change-me
       - DATABASE_URL=sqlite:////app/instance/browser_test.db
       - HEADLESS=false
       - PYTHONPATH=/app
@@ -39,12 +36,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    networks:
-      - browser-test-network
-
-networks:
-  browser-test-network:
-    driver: bridge
+    # network_mode: host kullanıldığında networks tanımı kullanılamaz
 
 volumes:
   browser_test_instance:

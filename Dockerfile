@@ -53,6 +53,7 @@ COPY . .
 # Veritabanı dosyası için dizin oluştur ve izinleri ayarla
 RUN mkdir -p /app/instance && chmod 755 /app/instance
 RUN mkdir -p /app/logs && chmod 755 /app/logs
+RUN mkdir -p /tmp/chrome_user_data && chmod 777 /tmp/chrome_user_data
 
 # Port'u belirle
 EXPOSE 5001
@@ -112,6 +113,10 @@ timeout 10 sh -c "until xdpyinfo -display :99 >/dev/null 2>&1; do sleep 1; done"
 # Chrome test et\n\
 echo "Testing Chrome..."\n\
 DISPLAY=:99 google-chrome --headless --no-sandbox --disable-dev-shm-usage --version || echo "Chrome test warning"\n\
+\n\
+# Chrome user data directory oluştur\n\
+mkdir -p /tmp/chrome_user_data\n\
+chmod 755 /tmp/chrome_user_data\n\
 \n\
 # Veritabanı dosyasının izinlerini kontrol et\n\
 if [ ! -f /app/instance/browser_test.db ]; then\n\

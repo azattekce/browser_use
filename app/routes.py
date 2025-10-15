@@ -582,6 +582,10 @@ Sonra aşağıdaki adımları takip et:
         # Docker'da VNC ile görüntülenebilir olsun
         use_headless = False if is_docker else config['headless']
         
+        # Microsoft sitesi için özel strateji - ÖNCE TANIMLA
+        is_microsoft_site = "microsoft" in project_url.lower() or "login.microsoftonline" in project_url.lower()
+        log_step(f"🔍 Microsoft site check: {is_microsoft_site} for URL: {project_url}")
+        
         # Anti-bot tespiti için Chrome seçenekleri
         base_chrome_options = [
             "--no-sandbox",
@@ -624,15 +628,22 @@ Sonra aşağıdaki adımları takip et:
             "autofill.credit_card_enabled": False,
             "profile.default_content_setting_values.geolocation": 2,
             "profile.default_content_setting_values.media_stream_camera": 2,
-            "profile.default_content_setting_values.media_stream_mic": 2
+            "profile.default_content_setting_values.media_stream_mic": 2,
+            # Microsoft bypass için ek prefs
+            "webrtc.ip_handling_policy": "disable_non_proxied_udp",
+            "webrtc.multiple_routes_enabled": False,
+            "webrtc.nonproxied_udp_enabled": False,
+            "enable_do_not_track": False,
+            "plugins.always_open_pdf_externally": False,
+            "profile.managed_default_content_settings.javascript": 1
         }
 
         browser_config = {
             "headless": use_headless,
             "window_size": (config['window_width'], config['window_height']),
             "page_load_strategy": "eager",
-            "implicit_wait": config['implicit_wait'],
-            "explicit_wait": config['explicit_wait'],
+            "implicit_wait": 15 if is_microsoft_site else config['implicit_wait'],
+            "explicit_wait": 30 if is_microsoft_site else config['explicit_wait'],
             "disable_images": False,
             "disable_javascript": False,
             "chrome_options": base_chrome_options,
@@ -655,7 +666,47 @@ Sonra aşağıdaki adımları takip et:
                 "--remote-debugging-port=0",
                 "--disable-background-timer-throttling",
                 "--disable-backgrounding-occluded-windows",
-                "--disable-renderer-backgrounding"
+                "--disable-renderer-backgrounding",
+                # Güçlü Microsoft bypass için anti-bot seçenekleri
+                "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
+                "--disable-blink-features=AutomationControlled",
+                "--exclude-switches=enable-automation",
+                "--disable-extensions",
+                "--disable-plugins-discovery",
+                "--disable-component-extensions-with-background-pages", 
+                "--disable-background-timer-throttling",
+                "--disable-backgrounding-occluded-windows",
+                "--disable-renderer-backgrounding",
+                "--disable-features=TranslateUI,BlinkGenPropertyTrees",
+                "--disable-ipc-flooding-protection",
+                "--enable-features=NetworkService,NetworkServiceInProcess",
+                "--force-color-profile=srgb",
+                "--metrics-recording-only",
+                "--no-first-run",
+                "--no-default-browser-check",
+                "--no-pings",
+                "--password-store=basic",
+                "--use-mock-keychain",
+                "--lang=tr-TR,tr,en-US,en",
+                "--disable-client-side-phishing-detection",
+                "--disable-component-extensions-with-background-pages",
+                # Ek stealth seçenekleri
+                "--disable-plugins-discovery",
+                "--use-fake-ui-for-media-stream",
+                "--use-fake-device-for-media-stream",
+                "--disable-web-security",
+                "--disable-features=VizDisplayCompositor,TranslateUI,BlinkGenPropertyTrees",
+                "--disable-background-networking",
+                "--disable-field-trial-config",
+                "--disable-ipc-flooding-protection",
+                "--disable-hang-monitor",
+                "--disable-prompt-on-repost",
+                "--disable-domain-reliability",
+                "--disable-component-update",
+                "--autoplay-policy=user-gesture-required",
+                "--disable-background-mode",
+                "--mute-audio",
+                "--no-default-browser-check"
             ])
         else:
             # Yerel çalıştırmada maximize et
@@ -674,6 +725,71 @@ Sonra aşağıdaki adımları takip et:
         # Max steps değerini garantili integer yap
         max_steps_int = int(config['max_steps']) if isinstance(config['max_steps'], (str, int)) else 100
         log_step(f"🔢 Final max_steps: {max_steps_int} (Type: {type(max_steps_int)})")
+        
+        # Microsoft sitesi için özel strateji uygulanması
+        if is_microsoft_site:
+            log_step("🔐 Microsoft sitesi tespit edildi, özel strateji uygulanıyor...")
+            
+            # Microsoft bypass için JavaScript injection
+            browser_config["chrome_options"].append(
+                '--user-data-dir=/tmp/chrome_user_data'
+            )
+            
+            # Microsoft için özel prompt
+            microsoft_prompt = f"""
+IMPORTANT: You are accessing a Microsoft authentication page that may show access restrictions.
+
+STEP 1: First, inject anti-detection JavaScript:
+```javascript
+Object.defineProperty(navigator, 'webdriver', {{
+    get: () => undefined,
+}});
+
+Object.defineProperty(navigator, 'languages', {{
+    get: () => ['en-US', 'en'],
+}});
+
+Object.defineProperty(navigator, 'plugins', {{
+    get: () => [1, 2, 3, 4, 5],
+}});
+
+window.chrome = {{
+    runtime: {{}},
+}};
+
+Object.defineProperty(navigator, 'permissions', {{
+    get: () => ({{
+        query: () => Promise.resolve({{ state: 'granted' }}),
+    }}),
+}});
+```
+
+STEP 2: Wait 3 seconds for JavaScript to load properly.
+
+STEP 3: If you see "You cannot access this right now" message, try:
+- Click on "Sign out and sign in with a different account" link
+- Wait 5 seconds
+- Continue with the authentication flow
+
+URL to visit: {project_url}
+
+Special handling for Microsoft login:
+1. Navigate to the URL carefully
+2. If you see "You cannot access this right now" message:
+   - Look for "Sign out and sign in with a different account" link and click it
+   - Or wait 3 seconds and refresh the page once
+   - Be patient, don't rush actions
+3. Wait for page elements to fully load before interacting
+4. When login form appears, proceed with the original task
+
+Original task: {cleaned_content}
+
+Be methodical and wait between actions to avoid triggering security measures.
+"""
+            formatted_prompt = microsoft_prompt
+            # Microsoft siteler için daha yavaş işlem
+            max_steps_int = min(max_steps_int + 20, 150)  # Daha fazla adım ver
+            log_step(f"🔐 Microsoft için max_steps artırıldı: {max_steps_int}")
         
         # Dinamik LLM konfigürasyonu ile Agent oluştur
         if llm_config:
