@@ -13,6 +13,20 @@ import json
 import re
 from datetime import datetime
 
+def is_running_in_docker():
+    """Uygulamanın Docker container içinde çalışıp çalışmadığını kontrol eder"""
+    try:
+        # .dockerenv dosyası kontrol et
+        if os.path.exists('/.dockerenv'):
+            return True
+        # cgroup kontrol et
+        if os.path.exists('/proc/1/cgroup'):
+            with open('/proc/1/cgroup', 'r') as f:
+                return 'docker' in f.read()
+        return False
+    except:
+        return False
+
 def mask_sensitive_data(text):
     """Hassas verileri (şifreler, kredi kartı numaraları vb.) maskeler"""
     if not text or not isinstance(text, str):
@@ -654,11 +668,15 @@ def test_result(test_result_id):
     # Test sonuçlarını formatla
     formatted_steps = format_test_result(test_result)
     
+    # Docker tespiti
+    docker_running = is_running_in_docker()
+    
     return render_template('tests/result.html', 
                          test_result=test_result, 
                          prompt=prompt, 
                          project=project,
-                         formatted_steps=formatted_steps)
+                         formatted_steps=formatted_steps,
+                         docker_running=docker_running)
 
 # Test silme endpoint
 @test_bp.route('/result/<int:test_result_id>/delete', methods=['POST'])

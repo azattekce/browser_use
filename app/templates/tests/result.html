@@ -22,9 +22,16 @@
                         Test Sonucu #{{ test_result.id }}
                     </h1>
                 </div>
-                <a href="{{ url_for('project.project_detail', project_id=project.id) }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-2"></i> Projeler
-                </a>
+                <div class="d-flex gap-2">
+                    {% if docker_running %}
+                    <button onclick="openVNC()" class="btn btn-success me-2" title="Browser görüntüsünü VNC ile izle">
+                        <i class="fas fa-desktop me-2"></i> Browser Görüntüsü
+                    </button>
+                    {% endif %}
+                    <a href="{{ url_for('project.project_detail', project_id=project.id) }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i> Projeler
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -545,6 +552,18 @@ if ('{{ test_result.status }}' === 'running') {
             }
         }, 1000);
     }
+}
+
+// VNC açma fonksiyonu
+function openVNC() {
+    // Mevcut URL'den host ve port bilgisini al
+    const currentUrl = new URL(window.location);
+    const host = currentUrl.hostname;
+    // Port 6080'e değiştir (VNC noVNC portu)
+    const vncUrl = `http://${host}:6080/vnc.html`;
+    
+    // Yeni sekmede VNC interface'ini aç
+    window.open(vncUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
 }
 </script>
 {% endblock %}
