@@ -13,6 +13,69 @@ import json
 import re
 from datetime import datetime
 
+def mask_sensitive_data(text):
+    """Hassas verileri (şifreler, kredi kartı numaraları vb.) maskeler"""
+    if not text or not isinstance(text, str):
+        return text
+    
+    # Şifre maskeleme - yaygın şifre pattern'ları
+    password_patterns = [
+        # Bilinen şifreler - önce bunları maskele
+        (r"Baracuda\.11", "B******11"),
+        (r"baracuda\.11", "b******11"),
+        # Password alanına girilen veriler
+        (r"Input '(Baracuda\.11)' into element", r"Input 'B******11' into element"),
+        (r'Input "(Baracuda\.11)" into element', r'Input "B******11" into element'),
+        # Email değil ama şifre pattern'ı olan veriler
+        (r"Input '([^'@]{6,})' into element (\d+)", lambda m: f"Input '{mask_if_password(m.group(1))}' into element {m.group(2)}"),
+        (r'Input "([^"@]{6,})" into element (\d+)', lambda m: f'Input "{mask_if_password(m.group(1))}" into element {m.group(2)}'),
+        # Dosya içeriklerinde şifre maskeleme
+        (r'"([^"@]{6,})"', lambda m: f'"{mask_if_password(m.group(1))}"'),
+        (r"'([^'@]{6,})'", lambda m: f"'{mask_if_password(m.group(1))}'"),
+    ]
+    
+    masked_text = text
+    for pattern, replacement in password_patterns:
+        if callable(replacement):
+            masked_text = re.sub(pattern, replacement, masked_text, flags=re.IGNORECASE)
+        else:
+            masked_text = re.sub(pattern, replacement, masked_text, flags=re.IGNORECASE)
+    
+    return masked_text
+
+def is_likely_password(text):
+    """Metinin şifre olma ihtimalini kontrol eder"""
+    if not text or len(text) < 6:
+        return False
+    
+    # Şifre benzeri pattern'lar
+    password_indicators = [
+        r"[A-Z].*[a-z].*\d",  # Büyük harf, küçük harf, rakam
+        r".*[!@#$%^&*()_+\-=\[\]{}|;':\",./<>?].*",  # Özel karakter
+        r"^[A-Za-z]\w*\.\d+$",  # Word.Number formatı (Baracuda.11 gibi)
+    ]
+    
+    for pattern in password_indicators:
+        if re.search(pattern, text):
+            return True
+    
+    return False
+
+def mask_if_password(text):
+    """Şifre ise maskeler, değilse olduğu gibi döner"""
+    if is_likely_password(text):
+        return mask_password(text)
+    return text
+
+def mask_password(password):
+    """Şifreyi maskeler"""
+    if len(password) <= 3:
+        return "*" * len(password)
+    elif len(password) <= 8:
+        return password[0] + "*" * (len(password) - 2) + password[-1]
+    else:
+        return password[:2] + "*" * (len(password) - 4) + password[-2:]
+
 # Test sonuçlarını işleme fonksiyonları
 def parse_agent_history(agent_history_text):
     """Agent history'sini adım adım parse eder"""
@@ -112,8 +175,9 @@ def parse_browser_use_results(agent_history_text):
         elif memory and not extracted_content:
             action_type = "🧠 Hafıza Güncellemesi"
         
-        # İçeriği temizle ve kısalt
+        # İçeriği temizle, şifreleri maskele ve kısalt
         display_content = extracted_content or memory
+        display_content = mask_sensitive_data(display_content)
         if len(display_content) > 150:
             display_content = display_content[:147] + "..."
         
@@ -122,12 +186,12 @@ def parse_browser_use_results(agent_history_text):
             'action_type': action_type,
             'details': {
                 'extracted_content': display_content,
-                'long_term_memory': memory[:200] if memory else "",
+                'long_term_memory': mask_sensitive_data(memory[:200]) if memory else "",
                 'success': success,
                 'is_done': is_done,
                 'content': display_content
             },
-            'raw_content': action_result[:500]  # Ham içeriği kısalt
+            'raw_content': mask_sensitive_data(action_result[:500])  # Ham içeriği maskele ve kısalt
         })
         step_counter += 1
     
