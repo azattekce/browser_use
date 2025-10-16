@@ -475,6 +475,14 @@ def new_project():
             description=form.description.data,
             user_id=current_user.id
         )
+        
+        # Handle login credentials if enabled
+        if form.login_enabled.data:
+            project.set_login_credentials(
+                username=form.login_username.data,
+                password=form.login_password.data
+            )
+        
         db.session.add(project)
         db.session.commit()
         flash('Proje başarıyla oluşturuldu!', 'success')
@@ -509,10 +517,37 @@ def edit_project(project_id):
     
     form = ProjectForm(obj=project)
     
+    # Populate login credentials if they exist
+    if project.login_enabled:
+        login_data = project.get_login_credentials()
+        if login_data:
+            form.login_enabled.data = True
+            form.login_username.data = login_data.get('username', '')
+            # Don't populate password for security
+    
     if form.validate_on_submit():
         project.name = form.name.data
         project.url = form.url.data
         project.description = form.description.data
+        
+        # Handle login credentials
+        if form.login_enabled.data:
+            # Only update password if a new one is provided
+            if form.login_password.data and form.login_password.data.strip():
+                project.set_login_credentials(
+                    username=form.login_username.data,
+                    password=form.login_password.data
+                )
+            else:
+                # Update only username, keep existing password
+                project.login_enabled = True
+                project.login_username = form.login_username.data
+        else:
+            # Clear login credentials if disabled
+            project.login_enabled = False
+            project.login_username = None
+            project.login_password = None
+        
         db.session.commit()
         flash('Proje başarıyla güncellendi!', 'success')
         return redirect(url_for('project.project_detail', project_id=project.id))
@@ -858,6 +893,29 @@ def run_browser_test_async(app, test_result_id, project_url, prompt_content):
             except (ValueError, TypeError):
                 return default
         
+        # Get project login credentials if available
+        login_instructions = ""
+        with app.app_context():
+            test_result = TestResult.query.get(test_result_id)
+            if test_result and test_result.prompt and test_result.prompt.project:
+                project = test_result.prompt.project
+                if project.login_enabled:
+                    login_data = project.get_login_credentials()
+                    if login_data:
+                        username = login_data.get('username', '')
+                        password = login_data.get('password', '')
+                        if username and password:
+                            login_instructions = f"""
+
+ÖNEMLI - Otomatik Giriş Bilgileri:
+Bu proje için otomatik giriş etkin. Eğer test sırasında giriş yapman gerekirse aşağıdaki bilgileri kullan:
+- Kullanıcı adı: {username}
+- Şifre: {password}
+
+Test sırasında "giriş yap", "login ol", "sign in" gibi talepler karşılaştığında bu bilgileri otomatik olarak kullan.
+"""
+                            log_step(f"🔐 Otomatik giriş etkin - Kullanıcı: {username}")
+        
         # Prompt içeriğini URL ile değiştir ve daha net hale getir
         # F-string içinde backslash kullanılamadığı için değişkenleri önceden hazırlıyoruz
         url_placeholder = "Belirtilen URL'yi ziyaret et: {url}"
@@ -865,7 +923,7 @@ def run_browser_test_async(app, test_result_id, project_url, prompt_content):
         
         formatted_prompt = f"""
 Öncelikle şu web sitesini ziyaret et: {project_url}
-
+{login_instructions}
 Sonra aşağıdaki adımları takip et:
 
 {cleaned_content}

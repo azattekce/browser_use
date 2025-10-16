@@ -1,11 +1,19 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, SelectField, SubmitField, URLField
-from wtforms.validators import DataRequired, URL, Length
+from wtforms import StringField, TextAreaField, SelectField, SubmitField, URLField, PasswordField, BooleanField
+from wtforms.validators import DataRequired, URL, Length, Optional
 
 class ProjectForm(FlaskForm):
     name = StringField('Proje Adı', validators=[DataRequired(), Length(min=1, max=200)])
     url = StringField('Proje URL\'si', validators=[DataRequired(), URL()])
     description = TextAreaField('Açıklama', validators=[Length(max=500)])
+    
+    # Login bilgileri
+    login_enabled = BooleanField('Bu proje için login gerekli')
+    login_username = StringField('Kullanıcı Adı', validators=[Optional(), Length(max=200)],
+                                render_kw={'placeholder': 'örn: kullanici@domain.com'})
+    login_password = PasswordField('Şifre', validators=[Optional(), Length(max=200)],
+                                  render_kw={'placeholder': 'Şifrenizi girin'})
+    
     submit = SubmitField('Kaydet')
 
 class TestPromptForm(FlaskForm):

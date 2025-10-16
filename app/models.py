@@ -1,6 +1,9 @@
 from app import db
 from flask_login import UserMixin
 from datetime import datetime
+import base64
+import os
+from cryptography.fernet import Fernet
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -20,11 +23,64 @@ class Project(db.Model):
     url = db.Column(db.String(500), nullable=False)
     description = db.Column(db.Text)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    # Login bilgileri - şifreli saklanır
+    login_username = db.Column(db.String(300))  # Encrypted
+    login_password = db.Column(db.String(300))  # Encrypted 
+    login_enabled = db.Column(db.Boolean, default=False)  # Login gerekli mi?
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     test_prompts = db.relationship('TestPrompt', backref='project', lazy=True, cascade='all, delete-orphan')
+    
+    @staticmethod
+    def _get_encryption_key():
+        """Şifreleme anahtarını al veya oluştur"""
+        key_file = 'instance/encryption.key'
+        if os.path.exists(key_file):
+            with open(key_file, 'rb') as f:
+                return f.read()
+        else:
+            # Yeni anahtar oluştur
+            key = Fernet.generate_key()
+            os.makedirs(os.path.dirname(key_file), exist_ok=True)
+            with open(key_file, 'wb') as f:
+                f.write(key)
+            return key
+    
+    def set_login_credentials(self, username, password):
+        """Login bilgilerini şifreli olarak sakla"""
+        if not username and not password:
+            self.login_username = None
+            self.login_password = None
+            self.login_enabled = False
+            return
+            
+        key = self._get_encryption_key()
+        fernet = Fernet(key)
+        
+        if username:
+            self.login_username = fernet.encrypt(username.encode()).decode()
+        if password:
+            self.login_password = fernet.encrypt(password.encode()).decode()
+        
+        self.login_enabled = True
+    
+    def get_login_credentials(self):
+        """Login bilgilerini çöz ve döndür"""
+        if not self.login_enabled or not self.login_username or not self.login_password:
+            return None
+            
+        try:
+            key = self._get_encryption_key()
+            fernet = Fernet(key)
+            
+            username = fernet.decrypt(self.login_username.encode()).decode()
+            password = fernet.decrypt(self.login_password.encode()).decode()
+            
+            return {'username': username, 'password': password}
+        except Exception:
+            return None
     
     def __repr__(self):
         return f'<Project {self.name}>'
