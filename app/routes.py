@@ -10,7 +10,168 @@ import time
 import asyncio
 import json
 import json
+import re
 from datetime import datetime
+
+# Test sonuçlarını işleme fonksiyonları
+def parse_agent_history(agent_history_text):
+    """Agent history'sini adım adım parse eder"""
+    if not agent_history_text:
+        return []
+    
+    steps = []
+    
+    # Agent log pattern'larını yakala
+    patterns = {
+        'step': r'📍 Step (\d+):',
+        'action_result': r'ActionResult\(([^)]+)\)',
+        'memory': r'🧠 Memory: (.+?)(?=\n|$)',
+        'done': r'▶️\s+done: text: (.+?)(?=\n|$)',
+        'final_result': r'📄\s+Final Result:\s*(.+?)(?=\n|$)'
+    }
+    
+    step_counter = 1
+    current_step = None
+    
+    # Satır satır işle
+    lines = agent_history_text.split('\n')
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        # Step başlangıcını yakala
+        step_match = re.search(patterns['step'], line)
+        if step_match:
+            step_number = int(step_match.group(1))
+            current_step = {
+                'step_number': step_number,
+                'action_type': f'Adım {step_number}',
+                'details': {'content': line},
+                'raw_content': line
+            }
+            steps.append(current_step)
+            continue
+            
+        # Memory yakala
+        memory_match = re.search(patterns['memory'], line)
+        if memory_match:
+            memory_content = memory_match.group(1).strip()
+            steps.append({
+                'step_number': step_counter,
+                'action_type': 'Agent Hafızası',
+                'details': {
+                    'long_term_memory': memory_content,
+                    'success': True
+                },
+                'raw_content': line
+            })
+            step_counter += 1
+            continue
+            
+        # Done result yakala
+        done_match = re.search(patterns['done'], line)
+        if done_match:
+            done_content = done_match.group(1).strip()
+            # success kontrolü
+            success = 'success=True' in done_content or 'başarılı' in done_content.lower()
+            steps.append({
+                'step_number': step_counter,
+                'action_type': 'Adım Sonucu',
+                'details': {
+                    'extracted_content': done_content,
+                    'success': success,
+                    'is_done': True
+                },
+                'raw_content': line
+            })
+            step_counter += 1
+            continue
+            
+        # Final result yakala
+        final_match = re.search(patterns['final_result'], line)
+        if final_match:
+            final_content = final_match.group(1).strip()
+            steps.append({
+                'step_number': step_counter,
+                'action_type': 'Son Sonuç',
+                'details': {
+                    'extracted_content': final_content,
+                    'success': 'başarısız' not in final_content.lower() and 'hata' not in final_content.lower(),
+                    'is_done': True
+                },
+                'raw_content': line
+            })
+            step_counter += 1
+            continue
+        
+        # ActionResult yakala
+        action_match = re.search(patterns['action_result'], line)
+        if action_match:
+            params = {}
+            match_content = action_match.group(1)
+            
+            # Parametreleri parse et
+            if 'is_done=True' in match_content:
+                params['is_done'] = True
+            elif 'is_done=False' in match_content:
+                params['is_done'] = False
+                
+            if 'success=True' in match_content:
+                params['success'] = True
+            elif 'success=False' in match_content:
+                params['success'] = False
+            
+            # extracted_content yakala
+            content_match = re.search(r"extracted_content='([^']*)'", match_content)
+            if content_match:
+                params['extracted_content'] = content_match.group(1)
+            
+            # long_term_memory yakala  
+            memory_match = re.search(r'long_term_memory="([^"]*)"', match_content)
+            if memory_match:
+                params['long_term_memory'] = memory_match.group(1)
+                
+            steps.append({
+                'step_number': step_counter,
+                'action_type': 'Eylem Sonucu',
+                'details': params,
+                'raw_content': line[:200] + '...' if len(line) > 200 else line
+            })
+            step_counter += 1
+            continue
+        
+        # Genel log satırları
+        if any(word in line.lower() for word in ['info', 'error', 'warning', 'debug']):
+            steps.append({
+                'step_number': step_counter,
+                'action_type': 'Log',
+                'details': {'content': line},
+                'raw_content': line
+            })
+            step_counter += 1
+    
+    return steps[:20]  # İlk 20 adımı al
+
+def format_test_result(test_result):
+    """Test sonucunu formatla"""
+    if not test_result.result_text:
+        return "Test henüz tamamlanmadı veya sonuç yok."
+    
+    # JSON olarak parse etmeye çalış
+    try:
+        if isinstance(test_result.result_text, str):
+            result_data = json.loads(test_result.result_text)
+        else:
+            result_data = test_result.result_text
+        
+        if 'agent_history' in result_data:
+            return parse_agent_history(result_data['agent_history'])
+        else:
+            return [{'step_number': 1, 'action_type': 'Result', 'details': result_data, 'raw_content': str(result_data)}]
+    except (json.JSONDecodeError, TypeError):
+        # String olarak işle
+        return parse_agent_history(test_result.result_text)
 
 # Blueprints
 main_bp = Blueprint('main', __name__)
@@ -310,7 +471,14 @@ def test_result(test_result_id):
         flash('Bu test sonucunu görme yetkiniz yok!', 'error')
         return redirect(url_for('project.list_projects'))
     
-    return render_template('tests/result.html', test_result=test_result, prompt=prompt, project=project)
+    # Test sonuçlarını formatla
+    formatted_steps = format_test_result(test_result)
+    
+    return render_template('tests/result.html', 
+                         test_result=test_result, 
+                         prompt=prompt, 
+                         project=project,
+                         formatted_steps=formatted_steps)
 
 # Test silme endpoint
 @test_bp.route('/result/<int:test_result_id>/delete', methods=['POST'])
