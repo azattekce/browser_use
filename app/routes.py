@@ -19,6 +19,122 @@ def parse_agent_history(agent_history_text):
     if not agent_history_text:
         return []
     
+    # AgentHistoryList yapısını kontrol et
+    if 'AgentHistoryList' in agent_history_text and 'ActionResult' in agent_history_text:
+        return parse_browser_use_results(agent_history_text)
+    
+    # Eski format için fallback
+    return parse_legacy_format(agent_history_text)
+
+def parse_browser_use_results(agent_history_text):
+    """Browser-use AgentHistoryList yapısını parse eder"""
+    steps = []
+    step_counter = 1
+    
+    # ActionResult'ları daha detaylı yakala
+    # Nested parantezleri de hesaba katarak parse et
+    action_results = []
+    start = 0
+    while True:
+        action_start = agent_history_text.find('ActionResult(', start)
+        if action_start == -1:
+            break
+            
+        # Parantezleri sayarak bitiş noktasını bul
+        paren_count = 1
+        pos = action_start + len('ActionResult(')
+        while pos < len(agent_history_text) and paren_count > 0:
+            if agent_history_text[pos] == '(':
+                paren_count += 1
+            elif agent_history_text[pos] == ')':
+                paren_count -= 1
+            pos += 1
+        
+        if paren_count == 0:
+            action_result = agent_history_text[action_start:pos]
+            action_results.append(action_result)
+        
+        start = pos
+    
+    for action_result in action_results:
+        # is_done kontrolü
+        is_done = 'is_done=True' in action_result
+        success = None
+        if 'success=True' in action_result:
+            success = True
+        elif 'success=False' in action_result:
+            success = False
+            
+        # extracted_content yakala (daha güçlü regex)
+        extracted_content = ""
+        extracted_patterns = [
+            r"extracted_content='([^']*)'",
+            r'extracted_content="([^"]*)"',
+            r"extracted_content=([^,)]*)"
+        ]
+        for pattern in extracted_patterns:
+            extracted_match = re.search(pattern, action_result)
+            if extracted_match:
+                extracted_content = extracted_match.group(1).strip('"\'')
+                break
+        
+        # long_term_memory yakala (daha güçlü regex)
+        memory = ""
+        memory_patterns = [
+            r"long_term_memory='([^']*)'",
+            r'long_term_memory="([^"]*)"',
+            r"long_term_memory=([^,)]*)"
+        ]
+        for pattern in memory_patterns:
+            memory_match = re.search(pattern, action_result)
+            if memory_match:
+                memory = memory_match.group(1).strip('"\'')
+                break
+        
+        # Action type belirle
+        action_type = "Browser İşlemi"
+        content_to_check = (extracted_content + " " + memory).lower()
+        
+        if is_done and success:
+            action_type = "✅ Test Tamamlandı"
+        elif is_done:
+            action_type = "🏁 İşlem Tamamlandı"
+        elif 'navigated' in content_to_check or 'navigate' in content_to_check:
+            action_type = "🌐 Sayfa Yükleme"
+        elif 'input' in content_to_check and 'element' in content_to_check:
+            action_type = "⌨️ Veri Girişi"
+        elif 'clicked' in content_to_check or 'click' in content_to_check:
+            action_type = "🖱️ Tıklama"
+        elif 'waited' in content_to_check or 'wait' in content_to_check:
+            action_type = "⏳ Bekleme"
+        elif 'file' in content_to_check and ('written' in content_to_check or 'replaced' in content_to_check):
+            action_type = "📄 Dosya İşlemi"
+        elif memory and not extracted_content:
+            action_type = "🧠 Hafıza Güncellemesi"
+        
+        # İçeriği temizle ve kısalt
+        display_content = extracted_content or memory
+        if len(display_content) > 150:
+            display_content = display_content[:147] + "..."
+        
+        steps.append({
+            'step_number': step_counter,
+            'action_type': action_type,
+            'details': {
+                'extracted_content': display_content,
+                'long_term_memory': memory[:200] if memory else "",
+                'success': success,
+                'is_done': is_done,
+                'content': display_content
+            },
+            'raw_content': action_result[:500]  # Ham içeriği kısalt
+        })
+        step_counter += 1
+    
+    return steps[:50]  # İlk 50 adımı al
+
+def parse_legacy_format(agent_history_text):
+    """Eski format için fallback parser"""
     steps = []
     
     # Agent log pattern'larını yakala
