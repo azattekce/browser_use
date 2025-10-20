@@ -56,8 +56,7 @@ RUN mkdir -p /app/logs && chmod 755 /app/logs
 RUN mkdir -p /tmp/chrome_user_data && chmod 777 /tmp/chrome_user_data
 
 # Port'u belirle
-EXPOSE 5001
-EXPOSE 5002
+EXPOSE 5001 5002 5900 6080 5005
 
 # Çevre değişkenlerini ayarla
 ENV FLASK_APP=run.py

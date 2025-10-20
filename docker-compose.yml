@@ -1,6 +1,7 @@
 services:
   browser-test-app:
     build: .
+    image: myacrjokeruitest1.azurecr.io/jokeruitest:v1.0
     network_mode: "host"  # Host network kullan - Microsoft bypass için
     env_file:
       - .env
@@ -15,7 +16,7 @@ services:
       - PYTHONPATH=/app
       - DISPLAY=:99
       - DOCKER_USER=docker_admin
-      - PORT=5001
+      - PORT=5002
       # LLM API Keys - Host .env dosyasından alınacak
       - LLM_PROVIDER=${LLM_PROVIDER:-gemini}
       - LLM_MODEL=${LLM_MODEL:-gemini-flash-latest}
