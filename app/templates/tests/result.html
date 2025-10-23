@@ -23,13 +23,9 @@
                     </h1>
                 </div>
                 <div class="d-flex gap-2">
-                    {% if docker_running and not (request.host and 'azurecontainerapps.io' in request.host) %}
+                    {% if docker_running %}
                     <button onclick="openVNC()" class="btn btn-success me-2" title="Browser görüntüsünü VNC ile izle">
                         <i class="fas fa-desktop me-2"></i> Browser Görüntüsü
-                    </button>
-                    {% elif docker_running %}
-                    <button class="btn btn-info me-2" disabled title="Azure Container Apps'te VNC erişimi kısıtlıdır">
-                        <i class="fas fa-info-circle me-2"></i> VNC: Azure'da Kısıtlı
                     </button>
                     {% endif %}
                     <a href="{{ url_for('project.project_detail', project_id=project.id) }}" class="btn btn-outline-secondary">
@@ -558,14 +554,20 @@ if ('{{ test_result.status }}' === 'running') {
     }
 }
 
-// VNC açma fonksiyonu - Azure Container Apps uyumlu
+// VNC açma fonksiyonu - Environment aware
 function openVNC() {
-    // Azure Container Apps'te sadece ana port (5005) açık olduğu için
-    // noVNC'ye doğrudan erişim mümkün değil
-    alert('ℹ️ VNC Bilgisi\n\nAzure Container Apps ortamında VNC görüntüsüne doğrudan erişim kısıtlıdır.\n\n' +
-          '✅ Browser automation arka planda çalışmaya devam ediyor.\n' +
-          '📊 Test sonuçlarını bu sayfada takip edebilirsiniz.\n' +
-          '🔍 Container loglarında VNC aktivitesini görebilirsiniz.');
+    // Azure Container Apps check
+    if (window.location.hostname.includes('azurecontainerapps.io')) {
+        alert('ℹ️ VNC Bilgisi\n\nAzure Container Apps ortamında VNC görüntüsüne doğrudan erişim kısıtlıdır.\n\n' +
+              '✅ Browser automation arka planda çalışmaya devam ediyor.\n' +
+              '📊 Test sonuçlarını bu sayfada takip edebilirsiniz.\n' +
+              '🔍 Container loglarında VNC aktivitesini görebilirsiniz.');
+        return;
+    }
+    
+    // Local Docker - VNC viewer açıl
+    const vncUrl = 'http://localhost:6080/vnc.html?host=localhost&port=6080&autoconnect=true&resize=scale';
+    window.open(vncUrl, '_blank', 'width=1024,height=768,scrollbars=yes,resizable=yes');
 }
 </script>
 {% endblock %}
