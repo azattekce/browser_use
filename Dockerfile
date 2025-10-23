@@ -80,23 +80,27 @@ rm -f /tmp/.X99-lock /tmp/.X11-unix/X99\n\
 mkdir -p /app/instance\n\
 chmod 755 /app/instance\n\
 \n\
+# VNC password oluştur\n\
+mkdir -p /tmp\n\
+\n\
 # X11 server başlat (background)\n\
 export DISPLAY=:99\n\
-Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset &\n\
+Xvfb :99 -screen 0 1280x720x24 -ac +extension GLX +render -noreset &\n\
 XVFB_PID=$!\n\
 \n\
 # X11 serverın hazır olmasını bekle\n\
 sleep 3\n\
 \n\
 # Fluxbox başlat (background)\n\
-fluxbox &\n\
+DISPLAY=:99 fluxbox &\n\
 FLUXBOX_PID=$!\n\
-\n\
-# VNC server başlat (background)\n\
-echo "Starting VNC server..."\n\
-x11vnc -display :99 -nopw -listen localhost -xkb -ncache 10 -ncache_cr -forever &\n\
-VNC_PID=$!\n\
 sleep 2\n\
+\n\
+# VNC server başlat (background) - daha stable parametrelerle\n\
+echo "Starting VNC server..."\n\
+x11vnc -display :99 -nopw -listen localhost -xkb -shared -forever -desktop "Browser Automation" &\n\
+VNC_PID=$!\n\
+sleep 3\n\
 \n\
 # NoVNC WebSocket proxy başlat\n\
 echo "Starting noVNC WebSocket proxy..."\n\
