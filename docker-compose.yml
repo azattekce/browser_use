@@ -2,25 +2,21 @@ services:
   browser-test-app:
     build: .
     image: myacrjokeruitest1.azurecr.io/jokeruitest:v1.0
-    # network_mode: "host" # Azure Container Apps'da desteklenmiyor - kaldırıldı
-    ports:
-      - "5002:5002"  # Flask app
-      - "6080:6080"  # noVNC web client
-      - "5900:5900"  # VNC server
+    network_mode: "host" # Azure Container Apps'da desteklenmiyor - kaldırıldı
     env_file:
       - .env
     volumes:
       - browser_test_instance:/app/instance:rw
       - browser_test_logs:/app/logs:rw
     environment:
-      - FLASK_ENV=production  # Azure için production
-      - SECRET_KEY=production-secret-key-change-me-in-production
+      - FLASK_ENV=development  # Azure için production
+      - SECRET_KEY=development-secret-key-change-me-in-production
       - DATABASE_URL=sqlite:////app/instance/browser_test.db
       - HEADLESS=false
       - PYTHONPATH=/app
       - DISPLAY=:99
       - DOCKER_USER=docker_admin
-      - PORT=5002
+      - PORT=5005
       - RUNNING_IN_DOCKER=true
       - AZURE_CONTAINER_APP=true
       # LLM API Keys

@@ -156,3 +156,13 @@ dmypy.json
 
 # pytype static type analyzer
 .pytype/
+
+# Azure deployment configuration (ignore real deployment manifests)
+azure-container-app.yaml
+container-app-with-storage.yaml
+storage.yml
+
+# Keep example sanitized manifests (do track these if created)
+azure-container-app.example.yaml
+container-app-with-storage.example.yaml
+storage.example.yml

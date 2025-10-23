@@ -563,15 +563,12 @@ function openVNC() {
     
     let vncUrl;
     
-    // Azure Container Apps URL formatını kontrol et
-    if (host.includes('azurecontainerapps.io')) {
-        // Azure Container Apps için özel URL formatı
-        // jokeruitest--5002.app.environment.westeurope.azurecontainerapps.io
-        // jokeruitest--6080.app.environment.westeurope.azurecontainerapps.io
-        const baseUrl = host.replace('--5002', '--6080').replace(':5002', '');
-        vncUrl = `${protocol}//${baseUrl}/vnc.html`;
+    // Azure Container Apps veya production environment
+    if (host.includes('azurecontainerapps.io') || window.location.port === '5005') {
+        // Flask proxy endpoint kullan
+        vncUrl = `${protocol}//${host}${window.location.port ? ':' + window.location.port : ''}/vnc.html`;
     } else if (host.includes('localhost') || host.includes('127.0.0.1')) {
-        // Yerel Docker için
+        // Yerel Docker için direkt noVNC
         vncUrl = `${protocol}//${host}:6080/vnc.html`;
     } else {
         // Generic Docker için

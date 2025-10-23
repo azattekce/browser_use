@@ -43,7 +43,7 @@ properties:
       - name: DATABASE_URL
         value: sqlite:////mnt/database/browser_test.db
       - name: BROWSER_USE_API_KEY
-        value: bu_PqcFI9N4MAGyjeuOwHVKotQgN6wOnVs4CLlju85PaM0
+        value: bu_b2S3gL-PuqMZmB_J8bTBLmRMMTiGYp4LF3y0ma-CMuI
       volumeMounts:
       - mountPath: /mnt/database
         volumeName: database-volume

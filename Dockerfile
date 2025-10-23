@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     x11-utils \
     procps \
     python3-pip \
+    imagemagick \
     && rm -rf /var/lib/apt/lists/*
 
 # NoVNC ve websockify kurulumu
