@@ -554,30 +554,12 @@ if ('{{ test_result.status }}' === 'running') {
     }
 }
 
-// VNC açma fonksiyonu - Azure Container Apps uyumlu
+// VNC açma fonksiyonu
 function openVNC() {
-    // Mevcut URL'den host ve port bilgisini al
-    const currentUrl = new URL(window.location);
-    const host = currentUrl.hostname;
-    const protocol = currentUrl.protocol;
-    
-    let vncUrl;
-    
-    // Azure Container Apps veya production environment
-    if (host.includes('azurecontainerapps.io') || window.location.port === '5005') {
-        // Flask proxy endpoint kullan
-        vncUrl = `${protocol}//${host}${window.location.port ? ':' + window.location.port : ''}/vnc.html`;
-    } else if (host.includes('localhost') || host.includes('127.0.0.1')) {
-        // Yerel Docker için direkt noVNC
-        vncUrl = `${protocol}//${host}:6080/vnc.html`;
-    } else {
-        // Generic Docker için
-        const port = currentUrl.port ? `:6080` : ':6080';
-        vncUrl = `${protocol}//${host}${port}/vnc.html`;
-    }
-    
-    console.log('Opening VNC URL:', vncUrl);
-    
+    // Mevcut URL'den host bilgisini al
+    const host = window.location.hostname;
+    // Port 6080'e değiştir (VNC noVNC portu)
+    const vncUrl = `http://${host}:6080/vnc.html`;
     // Yeni sekmede VNC interface'ini aç
     window.open(vncUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
 }
