@@ -554,13 +554,32 @@ if ('{{ test_result.status }}' === 'running') {
     }
 }
 
-// VNC açma fonksiyonu
+// VNC açma fonksiyonu - Azure Container Apps uyumlu
 function openVNC() {
     // Mevcut URL'den host ve port bilgisini al
     const currentUrl = new URL(window.location);
     const host = currentUrl.hostname;
-    // Port 6080'e değiştir (VNC noVNC portu)
-    const vncUrl = `http://${host}:6080/vnc.html`;
+    const protocol = currentUrl.protocol;
+    
+    let vncUrl;
+    
+    // Azure Container Apps URL formatını kontrol et
+    if (host.includes('azurecontainerapps.io')) {
+        // Azure Container Apps için özel URL formatı
+        // jokeruitest--5002.app.environment.westeurope.azurecontainerapps.io
+        // jokeruitest--6080.app.environment.westeurope.azurecontainerapps.io
+        const baseUrl = host.replace('--5002', '--6080').replace(':5002', '');
+        vncUrl = `${protocol}//${baseUrl}/vnc.html`;
+    } else if (host.includes('localhost') || host.includes('127.0.0.1')) {
+        // Yerel Docker için
+        vncUrl = `${protocol}//${host}:6080/vnc.html`;
+    } else {
+        // Generic Docker için
+        const port = currentUrl.port ? `:6080` : ':6080';
+        vncUrl = `${protocol}//${host}${port}/vnc.html`;
+    }
+    
+    console.log('Opening VNC URL:', vncUrl);
     
     // Yeni sekmede VNC interface'ini aç
     window.open(vncUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');

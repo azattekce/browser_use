@@ -1,0 +1,56 @@
+# Container App Update with Persistent Storage for Database
+# This configuration adds Azure File Share mount for SQLite database persistence
+
+properties:
+  template:
+    containers:
+    - name: jokeruitest-browser-app
+      image: myacrjokeruitest1.azurecr.io/jokeruitest:v1.0
+      resources:
+        cpu: 0.5
+        memory: 1Gi
+      env:
+      - name: FLASK_ENV
+        value: production
+      - name: PORT
+        value: "5002"
+      - name: RUNNING_IN_DOCKER
+        value: "true"
+      - name: AZURE_CONTAINER_APP
+        value: "true"
+      - name: DOCKER_USER
+        value: docker_admin
+      - name: HEADLESS
+        value: "false"
+      - name: PYTHONPATH
+        value: /app
+      - name: DISPLAY
+        value: ":99"
+      - name: LLM_PROVIDER
+        value: gemini
+      - name: LLM_MODEL
+        value: gemini-flash-latest
+      - name: WINDOW_WIDTH
+        value: "1920"
+      - name: WINDOW_HEIGHT
+        value: "1080"
+      - name: IMPLICIT_WAIT
+        value: "5"
+      - name: EXPLICIT_WAIT
+        value: "10"
+      - name: MAX_STEPS
+        value: "50"
+      - name: DATABASE_URL
+        value: sqlite:////mnt/database/browser_test.db
+      - name: BROWSER_USE_API_KEY
+        value: bu_PqcFI9N4MAGyjeuOwHVKotQgN6wOnVs4CLlju85PaM0
+      volumeMounts:
+      - mountPath: /mnt/database
+        volumeName: database-volume
+    volumes:
+    - name: database-volume
+      storageType: AzureFile
+      storageName: database-storage
+    scale:
+      minReplicas: 1
+      maxReplicas: 2

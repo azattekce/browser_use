@@ -16,13 +16,23 @@ from datetime import datetime
 def is_running_in_docker():
     """Uygulamanın Docker container içinde çalışıp çalışmadığını kontrol eder"""
     try:
+        # Environment variable kontrolü (en güvenilir - Azure Container Apps için)
+        if os.getenv('RUNNING_IN_DOCKER') == 'true':
+            return True
+            
+        # Azure Container Apps kontrolü
+        if os.getenv('AZURE_CONTAINER_APP') == 'true':
+            return True
+            
         # .dockerenv dosyası kontrol et
         if os.path.exists('/.dockerenv'):
             return True
-        # cgroup kontrol et
+            
+        # cgroup kontrol et (fallback)
         if os.path.exists('/proc/1/cgroup'):
             with open('/proc/1/cgroup', 'r') as f:
-                return 'docker' in f.read()
+                content = f.read()
+                return 'docker' in content or 'containerd' in content
         return False
     except:
         return False
