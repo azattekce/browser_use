@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, TextAreaField, SelectField, SubmitField, URLField, PasswordField, BooleanField
-from wtforms.validators import DataRequired, URL, Length, Optional
+from wtforms.validators import DataRequired, URL, Length, Optional, Email, EqualTo, ValidationError
 
 class ProjectForm(FlaskForm):
     name = StringField('Proje Adı', validators=[DataRequired(), Length(min=1, max=200)])
@@ -33,4 +33,42 @@ class RunSingleTestForm(FlaskForm):
     submit = SubmitField('Testi Çalıştır')
 
 class LoginForm(FlaskForm):
-    submit = SubmitField('Windows Kullanıcısı ile Giriş Yap')
+    username_or_email = StringField('Kullanıcı Adı veya Email', 
+                                   validators=[DataRequired()],
+                                   render_kw={'placeholder': 'kullanici@email.com veya kullaniciadi'})
+    password = PasswordField('Şifre', 
+                           validators=[DataRequired()],
+                           render_kw={'placeholder': 'Şifrenizi girin'})
+    remember_me = BooleanField('Beni hatırla')
+    submit = SubmitField('Giriş Yap')
+
+class RegisterForm(FlaskForm):
+    username = StringField('Kullanıcı Adı', 
+                          validators=[DataRequired(), Length(min=3, max=80)],
+                          render_kw={'placeholder': 'Kullanıcı adınızı girin'})
+    email = StringField('Email', 
+                       validators=[DataRequired(), Email(), Length(min=6, max=120)],
+                       render_kw={'placeholder': 'email@example.com'})
+    password = PasswordField('Şifre', 
+                           validators=[DataRequired(), Length(min=6, max=50)],
+                           render_kw={'placeholder': 'En az 6 karakter'})
+    confirm_password = PasswordField('Şifre Tekrar', 
+                                   validators=[DataRequired(), EqualTo('password', message='Şifreler eşleşmiyor!')],
+                                   render_kw={'placeholder': 'Şifrenizi tekrar girin'})
+    submit = SubmitField('Kayıt Ol')
+
+class UserProfileForm(FlaskForm):
+    username = StringField('Kullanıcı Adı', 
+                          validators=[DataRequired(), Length(min=3, max=80)])
+    email = StringField('Email', 
+                       validators=[DataRequired(), Length(min=6, max=120)])
+    current_password = PasswordField('Mevcut Şifre', 
+                                   validators=[Optional()],
+                                   render_kw={'placeholder': 'Şifre değiştirmek için gerekli'})
+    new_password = PasswordField('Yeni Şifre', 
+                               validators=[Optional(), Length(min=6, max=50)],
+                               render_kw={'placeholder': 'Boş bırakılırsa değişmez'})
+    confirm_new_password = PasswordField('Yeni Şifre Tekrar', 
+                                       validators=[Optional()],
+                                       render_kw={'placeholder': 'Yeni şifreyi tekrar girin'})
+    submit = SubmitField('Güncelle')

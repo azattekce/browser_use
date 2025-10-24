@@ -57,11 +57,14 @@ def create_app():
         if not admin:
             admin_user = User(
                 username='admin',
-                is_admin=True
+                email='admin@example.com',
+                yetki=1,  # Admin
+                is_aktif=True
             )
+            admin_user.set_password('admin123')  # Default password
             db.session.add(admin_user)
             db.session.commit()
-            print("Default admin user created!")
+            print("Default admin user created! (username: admin, password: admin123)")
     
     return app
 

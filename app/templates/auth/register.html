@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Giriş Yap - Browser Test Automation{% endblock %}
+{% block title %}Kayıt Ol - Browser Test Automation{% endblock %}
 
 {% block content %}
 <div class="container-fluid min-vh-100 d-flex align-items-center justify-content-center bg-light">
@@ -9,9 +9,9 @@
             <div class="card shadow-lg border-0">
                 <div class="card-body p-5">
                     <div class="text-center mb-4">
-                        <i class="fas fa-robot fa-3x text-primary mb-3"></i>
-                        <h2 class="card-title text-primary">Browser Test Automation</h2>
-                        <p class="text-muted">Hesabınıza giriş yapın</p>
+                        <i class="fas fa-user-plus fa-3x text-success mb-3"></i>
+                        <h2 class="card-title text-success">Yeni Hesap Oluştur</h2>
+                        <p class="text-muted">Browser Test Automation'a katılın</p>
                     </div>
 
                     <!-- Flash Messages -->
@@ -30,11 +30,23 @@
                         {{ form.hidden_tag() }}
                         
                         <div class="mb-3">
-                            {{ form.username_or_email.label(class="form-label") }}
-                            {{ form.username_or_email(class="form-control form-control-lg") }}
-                            {% if form.username_or_email.errors %}
+                            {{ form.username.label(class="form-label") }}
+                            {{ form.username(class="form-control form-control-lg") }}
+                            {% if form.username.errors %}
                                 <div class="text-danger small mt-1">
-                                    {% for error in form.username_or_email.errors %}
+                                    {% for error in form.username.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.email.label(class="form-label") }}
+                            {{ form.email(class="form-control form-control-lg") }}
+                            {% if form.email.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.email.errors %}
                                         <div>{{ error }}</div>
                                     {% endfor %}
                                 </div>
@@ -53,21 +65,28 @@
                             {% endif %}
                         </div>
 
-                        <div class="mb-3 form-check">
-                            {{ form.remember_me(class="form-check-input") }}
-                            {{ form.remember_me.label(class="form-check-label") }}
+                        <div class="mb-4">
+                            {{ form.confirm_password.label(class="form-label") }}
+                            {{ form.confirm_password(class="form-control form-control-lg") }}
+                            {% if form.confirm_password.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.confirm_password.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
 
                         <div class="d-grid mb-3">
-                            {{ form.submit(class="btn btn-primary btn-lg") }}
+                            {{ form.submit(class="btn btn-success btn-lg") }}
                         </div>
                     </form>
 
                     <div class="text-center">
                         <p class="text-muted mb-0">
-                            Hesabınız yok mu? 
-                            <a href="{{ url_for('auth.register') }}" class="text-primary text-decoration-none fw-bold">
-                                Kayıt Ol
+                            Zaten hesabınız var mı? 
+                            <a href="{{ url_for('auth.login') }}" class="text-success text-decoration-none fw-bold">
+                                Giriş Yap
                             </a>
                         </p>
                     </div>
@@ -79,7 +98,7 @@
 
 <style>
 .min-vh-100 {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
 }
 
 .card {
@@ -87,18 +106,22 @@
 }
 
 .form-control:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    border-color: #11998e;
+    box-shadow: 0 0 0 0.2rem rgba(17, 153, 142, 0.25);
 }
 
-.btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.btn-success {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
     border: none;
 }
 
-.btn-primary:hover {
-    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+.btn-success:hover {
+    background: linear-gradient(135deg, #0e8a7f 0%, #32d970 100%);
     transform: translateY(-1px);
+}
+
+.text-success {
+    color: #11998e !important;
 }
 </style>
 {% endblock %}

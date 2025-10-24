@@ -4,15 +4,38 @@ from datetime import datetime
 import base64
 import os
 from cryptography.fernet import Fernet
+from werkzeug.security import generate_password_hash, check_password_hash
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    is_admin = db.Column(db.Boolean, default=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    yetki = db.Column(db.Integer, default=0)  # 0=normal user, 1=admin
+    is_aktif = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     projects = db.relationship('Project', backref='owner', lazy=True, cascade='all, delete-orphan')
+    
+    def set_password(self, password):
+        """Şifreyi hash'le ve kaydet"""
+        self.password_hash = generate_password_hash(password)
+    
+    def check_password(self, password):
+        """Şifreyi kontrol et"""
+        return check_password_hash(self.password_hash, password)
+    
+    @property
+    def is_admin(self):
+        """Admin kontrolü (backward compatibility için)"""
+        return self.yetki == 1
+    
+    @property
+    def is_active(self):
+        """Flask-Login için gerekli - aktif kullanıcı kontrolü"""
+        return self.is_aktif
     
     def __repr__(self):
         return f'<User {self.username}>'

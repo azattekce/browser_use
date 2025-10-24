@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}Kullanıcı Yönetimi - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2"><i class="fas fa-users text-warning"></i> Kullanıcı Yönetimi</h1>
+            <p class="text-muted">Sistemdeki tüm kullanıcıları yönetin</p>
+        </div>
+        <div>
+            <span class="badge bg-info fs-6">Toplam: {{ users|length }} kullanıcı</span>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-list"></i> Kullanıcı Listesi</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Kullanıcı</th>
+                                    <th>Email</th>
+                                    <th>Yetki</th>
+                                    <th>Durum</th>
+                                    <th>Kayıt Tarihi</th>
+                                    <th>Projeler</th>
+                                    <th>İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr class="{% if not user.is_aktif %}table-secondary{% endif %}">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar bg-primary rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 40px; height: 40px;">
+                                                <i class="fas fa-user text-white"></i>
+                                            </div>
+                                            <div>
+                                                <strong>{{ user.username }}</strong>
+                                                {% if user.id == current_user.id %}
+                                                    <span class="badge bg-info ms-1">Sen</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ user.email }}</td>
+                                    <td>
+                                        {% if user.yetki == 1 %}
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fas fa-crown"></i> Admin
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-user"></i> Kullanıcı
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if user.is_aktif %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check-circle"></i> Aktif
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-times-circle"></i> Pasif
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ user.created_at.strftime('%d.%m.%Y %H:%M') }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ user.projects|length }} proje</span>
+                                    </td>
+                                    <td>
+                                        {% if user.id != current_user.id %}
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('main.admin_toggle_user', user_id=user.id) }}" 
+                                               class="btn btn-sm {% if user.is_aktif %}btn-outline-danger{% else %}btn-outline-success{% endif %}"
+                                               title="{% if user.is_aktif %}Pasifleştir{% else %}Aktifleştir{% endif %}">
+                                                <i class="fas fa-{% if user.is_aktif %}ban{% else %}check{% endif %}"></i>
+                                            </a>
+                                        </div>
+                                        {% else %}
+                                        <small class="text-muted">Kendi hesabınız</small>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- İstatistikler -->
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-users fa-2x me-3"></i>
+                        <div>
+                            <h5 class="card-title mb-0">{{ users|length }}</h5>
+                            <p class="card-text mb-0">Toplam Kullanıcı</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check-circle fa-2x me-3"></i>
+                        <div>
+                            <h5 class="card-title mb-0">{{ users|selectattr('is_aktif')|list|length }}</h5>
+                            <p class="card-text mb-0">Aktif Kullanıcı</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-crown fa-2x me-3"></i>
+                        <div>
+                            <h5 class="card-title mb-0">{{ users|selectattr('yetki', 'equalto', 1)|list|length }}</h5>
+                            <p class="card-text mb-0">Admin Kullanıcı</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-times-circle fa-2x me-3"></i>
+                        <div>
+                            <h5 class="card-title mb-0">{{ users|rejectattr('is_aktif')|list|length }}</h5>
+                            <p class="card-text mb-0">Pasif Kullanıcı</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

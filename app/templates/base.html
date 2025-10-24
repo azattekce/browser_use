@@ -44,12 +44,32 @@
                     </li>
                 </ul>
                 <ul class="navbar-nav">
+                    {% if current_user.is_admin %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-crown text-warning"></i> Admin Panel
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('main.admin_users') }}">
+                                <i class="fas fa-users"></i> Kullanıcı Yönetimi
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.admin_projects') }}">
+                                <i class="fas fa-project-diagram"></i> Tüm Projeler
+                            </a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
+                    
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-user"></i> {{ current_user.username }}
-                            {% if current_user.is_admin %}<span class="badge bg-warning">Admin</span>{% endif %}
+                            {% if current_user.is_admin %}<span class="badge bg-warning ms-1">Admin</span>{% endif %}
                         </a>
                         <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#profileModal">
+                                <i class="fas fa-user-edit"></i> Profil Düzenle
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">
                                 <i class="fas fa-sign-out-alt"></i> Çıkış Yap
                             </a></li>
@@ -76,6 +96,60 @@
 
         {% block content %}{% endblock %}
     </main>
+
+    <!-- Profil Modal -->
+    {% if current_user.is_authenticated %}
+    <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="profileModalLabel">
+                        <i class="fas fa-user-edit"></i> Profil Düzenle
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="profileForm" method="POST" action="{{ url_for('auth.profile') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Kullanıcı Adı</label>
+                            <input type="text" class="form-control" id="username" name="username" value="{{ current_user.username }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ current_user.email }}" required>
+                        </div>
+                        
+                        <hr class="my-4">
+                        <h6 class="text-muted">Şifre Değiştir (Opsiyonel)</h6>
+                        
+                        <div class="mb-3">
+                            <label for="current_password" class="form-label">Mevcut Şifre</label>
+                            <input type="password" class="form-control" id="current_password" name="current_password">
+                            <div class="form-text">Şifre değiştirmek için gerekli</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="new_password" class="form-label">Yeni Şifre</label>
+                            <input type="password" class="form-control" id="new_password" name="new_password">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="confirm_new_password" class="form-label">Yeni Şifre Tekrar</label>
+                            <input type="password" class="form-control" id="confirm_new_password" name="confirm_new_password">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" form="profileForm" class="btn btn-primary">Güncelle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <footer class="bg-light mt-5 py-4">
         <div class="container text-center">

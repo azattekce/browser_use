@@ -1,8 +1,9 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, abort
 from flask_login import login_required, current_user, login_user, logout_user
+from functools import wraps
 from app import db
 from app.models import User, Project, TestPrompt, TestResult
-from app.forms import ProjectForm, TestPromptForm, RunTestForm, RunSingleTestForm, LoginForm
+from app.forms import ProjectForm, TestPromptForm, RunTestForm, RunSingleTestForm, LoginForm, RegisterForm, UserProfileForm
 import os
 import getpass
 import threading
@@ -12,6 +13,25 @@ import json
 import json
 import re
 from datetime import datetime
+
+# Authorization decorators
+def admin_required(f):
+    """Admin yetkisi gereken fonksiyonlar için decorator"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            flash('Bu sayfaya erişim yetkiniz yok!', 'error')
+            return redirect(url_for('main.dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def check_project_owner(project_id):
+    """Projenin sahibi olup olmadığını kontrol et (admin tüm projeleri görebilir)"""
+    project = Project.query.get_or_404(project_id)
+    if not current_user.is_admin and project.user_id != current_user.id:
+        flash('Bu projeye erişim yetkiniz yok!', 'error')
+        abort(403)
+    return project
 
 def is_running_in_docker():
     """Uygulamanın Docker container içinde çalışıp çalışmadığını kontrol eder"""
@@ -395,81 +415,243 @@ def index():
 @main_bp.route('/dashboard')
 @login_required
 def dashboard():
-    # Kullanıcının proje sayısı
-    total_projects = Project.query.filter_by(user_id=current_user.id).count()
-    
-    # Son test sonuçları (5 adet)
-    recent_tests = TestResult.query.join(TestPrompt).join(Project).filter(
-        Project.user_id == current_user.id
-    ).order_by(TestResult.created_at.desc()).limit(5).all()
-    
-    # Başarılı test sayısı (son 30 gün)
-    from datetime import datetime, timedelta
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-    successful_tests = TestResult.query.join(TestPrompt).join(Project).filter(
-        Project.user_id == current_user.id,
-        TestResult.status == 'completed',
-        TestResult.created_at >= thirty_days_ago
-    ).count()
-    
-    # Çalışan test sayısı
-    running_tests = TestResult.query.join(TestPrompt).join(Project).filter(
-        Project.user_id == current_user.id,
-        TestResult.status == 'running'
-    ).count()
-    
-    return render_template('dashboard.html', 
-                         total_projects=total_projects,
-                         recent_tests=recent_tests,
-                         successful_tests=successful_tests,
-                         running_tests=running_tests)
+    if current_user.is_admin:
+        # Admin dashboard - tüm veriler
+        total_projects = Project.query.count()
+        total_users = User.query.count()
+        active_users = User.query.filter_by(is_aktif=True).count()
+        
+        # Son test sonuçları (tüm kullanıcılar, 10 adet)
+        recent_tests = TestResult.query.join(TestPrompt).join(Project).join(User).order_by(
+            TestResult.created_at.desc()
+        ).limit(10).all()
+        
+        # Başarılı test sayısı (son 30 gün, tüm kullanıcılar)
+        from datetime import datetime, timedelta
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        successful_tests = TestResult.query.join(TestPrompt).join(Project).filter(
+            TestResult.status == 'completed',
+            TestResult.created_at >= thirty_days_ago
+        ).count()
+        
+        return render_template('dashboard.html', 
+                             total_projects=total_projects,
+                             total_users=total_users,
+                             active_users=active_users,
+                             recent_tests=recent_tests,
+                             successful_tests=successful_tests,
+                             is_admin_dashboard=True)
+    else:
+        # Normal kullanıcı dashboard
+        total_projects = Project.query.filter_by(user_id=current_user.id).count()
+        
+        # Son test sonuçları (5 adet)
+        recent_tests = TestResult.query.join(TestPrompt).join(Project).filter(
+            Project.user_id == current_user.id
+        ).order_by(TestResult.created_at.desc()).limit(5).all()
+        
+        # Başarılı test sayısı (son 30 gün)
+        from datetime import datetime, timedelta
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        successful_tests = TestResult.query.join(TestPrompt).join(Project).filter(
+            Project.user_id == current_user.id,
+            TestResult.status == 'completed',
+            TestResult.created_at >= thirty_days_ago
+        ).count()
+        
+        # Çalışan test sayısı
+        running_tests = TestResult.query.join(TestPrompt).join(Project).filter(
+            Project.user_id == current_user.id,
+            TestResult.status == 'running'
+        ).count()
+        
+        return render_template('dashboard.html', 
+                             total_projects=total_projects,
+                             recent_tests=recent_tests,
+                             successful_tests=successful_tests,
+                             running_tests=running_tests,
+                             is_admin_dashboard=False)
 
 # Giriş
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    import os
+    if current_user.is_authenticated:
+        return redirect(url_for('main.dashboard'))
+        
     form = LoginForm()
     
     if form.validate_on_submit():
-        # Kullanıcı adını al (Windows'dan veya environment'dan)
-        windows_username = os.getenv('USERNAME') or os.getenv('USER') or os.getenv('DOCKER_USER') or 'docker_user'
-        if not windows_username:
-            flash('Kullanıcı adı alınamadı!', 'error')
-            return render_template('auth/login.html', form=form)
+        # Email veya username ile kullanıcı ara
+        user = User.query.filter(
+            (User.email == form.username_or_email.data) | 
+            (User.username == form.username_or_email.data)
+        ).first()
         
-        # Kullanıcıyı bul veya oluştur
-        user = User.query.filter_by(username=windows_username).first()
-        
-        if not user:
-            # Yeni kullanıcı oluştur
-            user = User(username=windows_username)
-            # Admin kullanıcısını belirle (isteğe bağlı)
-            if windows_username.lower() in ['administrator', 'admin']:
-                user.is_admin = True
-            db.session.add(user)
-            db.session.commit()
-            flash(f'Kullanıcı {windows_username} ile yeni hesap oluşturuldu!', 'success')
-        
-        login_user(user)
-        flash(f'Kullanıcı {windows_username} olarak giriş yapıldı!', 'success')
-        return redirect(url_for('main.dashboard'))
+        if user and user.check_password(form.password.data):
+            if not user.is_aktif:
+                flash('Hesabınız devre dışı bırakılmış. Yönetici ile iletişime geçin.', 'error')
+                return render_template('auth/login.html', form=form)
+                
+            login_user(user, remember=form.remember_me.data)
+            flash(f'Hoş geldiniz, {user.username}!', 'success')
+            
+            # Kullanıcıyı istediği sayfaya yönlendir
+            next_page = request.args.get('next')
+            if not next_page or not next_page.startswith('/'):
+                next_page = url_for('main.dashboard')
+            return redirect(next_page)
+        else:
+            flash('Hatalı kullanıcı adı/email veya şifre!', 'error')
     
-    # GET request için kullanıcı adını al
-    windows_username = os.getenv('USERNAME') or os.getenv('USER') or os.getenv('DOCKER_USER') or 'docker_user'
-    return render_template('auth/login.html', form=form, windows_user=windows_username)
+    return render_template('auth/login.html', form=form)
+
+# Kayıt
+@auth_bp.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.dashboard'))
+        
+    form = RegisterForm()
+    
+    if form.validate_on_submit():
+        # Kullanıcı adı ve email kontrolü
+        existing_user = User.query.filter(
+            (User.username == form.username.data) | 
+            (User.email == form.email.data)
+        ).first()
+        
+        if existing_user:
+            if existing_user.username == form.username.data:
+                flash('Bu kullanıcı adı zaten kullanılıyor!', 'error')
+            else:
+                flash('Bu email adresi zaten kullanılıyor!', 'error')
+            return render_template('auth/register.html', form=form)
+        
+        # Yeni kullanıcı oluştur
+        user = User(
+            username=form.username.data,
+            email=form.email.data,
+            yetki=0,  # Normal kullanıcı
+            is_aktif=True
+        )
+        user.set_password(form.password.data)
+        
+        db.session.add(user)
+        db.session.commit()
+        
+        flash('Kayıt başarılı! Şimdi giriş yapabilirsiniz.', 'success')
+        return redirect(url_for('auth.login'))
+    
+    return render_template('auth/register.html', form=form)
 
 # Çıkış
 @auth_bp.route('/logout')
 @login_required
 def logout():
+    flash(f'Güle güle, {current_user.username}!', 'info')
     logout_user()
     return redirect(url_for('auth.login'))
+
+# User profile modal
+@auth_bp.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    form = UserProfileForm(obj=current_user)
+    
+    if form.validate_on_submit():
+        # Username ve email değişikliği kontrolü
+        if form.username.data != current_user.username:
+            existing_user = User.query.filter_by(username=form.username.data).first()
+            if existing_user:
+                flash('Bu kullanıcı adı zaten kullanılıyor!', 'error')
+                return render_template('auth/profile_modal.html', form=form)
+        
+        if form.email.data != current_user.email:
+            existing_user = User.query.filter_by(email=form.email.data).first()
+            if existing_user:
+                flash('Bu email adresi zaten kullanılıyor!', 'error')
+                return render_template('auth/profile_modal.html', form=form)
+        
+        # Şifre değişikliği
+        if form.current_password.data and form.new_password.data:
+            if not current_user.check_password(form.current_password.data):
+                flash('Mevcut şifre yanlış!', 'error')
+                return render_template('auth/profile_modal.html', form=form)
+            
+            if form.new_password.data != form.confirm_new_password.data:
+                flash('Yeni şifreler eşleşmiyor!', 'error')
+                return render_template('auth/profile_modal.html', form=form)
+            
+            current_user.set_password(form.new_password.data)
+        
+        # Diğer alanları güncelle
+        current_user.username = form.username.data
+        current_user.email = form.email.data
+        
+        db.session.commit()
+        flash('Profil bilgileriniz güncellendi!', 'success')
+        return redirect(url_for('main.dashboard'))
+    
+    return render_template('auth/profile_modal.html', form=form)
+
+# Admin Panel Routes
+@main_bp.route('/admin')
+@login_required
+@admin_required
+def admin_panel():
+    return redirect(url_for('main.admin_users'))
+
+@main_bp.route('/admin/users')
+@login_required
+@admin_required
+def admin_users():
+    users = User.query.order_by(User.created_at.desc()).all()
+    return render_template('admin/users.html', users=users)
+
+@main_bp.route('/admin/users/<int:user_id>/toggle')
+@login_required
+@admin_required
+def admin_toggle_user(user_id):
+    user = User.query.get_or_404(user_id)
+    
+    if user.id == current_user.id:
+        flash('Kendi hesabınızı devre dışı bırakamazsınız!', 'error')
+    else:
+        user.is_aktif = not user.is_aktif
+        db.session.commit()
+        
+        status = 'aktifleştirildi' if user.is_aktif else 'devre dışı bırakıldı'
+        flash(f'{user.username} kullanıcısı {status}.', 'success')
+    
+    return redirect(url_for('main.admin_users'))
+
+@main_bp.route('/admin/projects')
+@login_required
+@admin_required
+def admin_projects():
+    try:
+        projects = Project.query.join(User).order_by(Project.created_at.desc()).all()
+        print(f"Admin projeler: {len(projects)} proje bulundu")
+        for p in projects:
+            print(f"- {p.name} (Owner: {p.owner.username})")
+        return render_template('admin/projects.html', projects=projects)
+    except Exception as e:
+        print(f"Admin projeler hatası: {e}")
+        from flask import flash
+        flash(f'Projeler yüklenirken hata: {str(e)}', 'error')
+        return render_template('admin/projects.html', projects=[])
 
 # Proje listesi
 @project_bp.route('/projects')
 @login_required
 def list_projects():
-    projects = Project.query.filter_by(user_id=current_user.id).all()
+    if current_user.is_admin:
+        # Admin tüm projeleri görebilir
+        projects = Project.query.join(User).order_by(Project.created_at.desc()).all()
+    else:
+        # Normal kullanıcı sadece kendi projelerini görür
+        projects = Project.query.filter_by(user_id=current_user.id).all()
+    
     return render_template('projects/list.html', projects=projects)
 
 # Yeni proje
@@ -504,13 +686,7 @@ def new_project():
 @project_bp.route('/project/<int:project_id>')
 @login_required
 def project_detail(project_id):
-    project = Project.query.get_or_404(project_id)
-    
-    # Kullanıcı yetkisi kontrolü
-    if project.user_id != current_user.id:
-        flash('Bu projeyi görme yetkiniz yok!', 'error')
-        return redirect(url_for('project.list_projects'))
-    
+    project = check_project_owner(project_id)  # Authorization helper kullanıyoruz
     prompts = TestPrompt.query.filter_by(project_id=project_id).all()
     return render_template('projects/prompts.html', project=project, prompts=prompts)
 
@@ -518,12 +694,7 @@ def project_detail(project_id):
 @project_bp.route('/project/<int:project_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_project(project_id):
-    project = Project.query.get_or_404(project_id)
-    
-    # Kullanıcı yetkisi kontrolü
-    if project.user_id != current_user.id:
-        flash('Bu projeyi düzenleme yetkiniz yok!', 'error')
-        return redirect(url_for('project.list_projects'))
+    project = check_project_owner(project_id)  # Authorization helper
     
     form = ProjectForm(obj=project)
     
@@ -568,12 +739,7 @@ def edit_project(project_id):
 @project_bp.route('/project/<int:project_id>/delete', methods=['POST'])
 @login_required
 def delete_project(project_id):
-    project = Project.query.get_or_404(project_id)
-    
-    # Kullanıcı yetkisi kontrolü
-    if project.user_id != current_user.id:
-        flash('Bu projeyi silme yetkiniz yok!', 'error')
-        return redirect(url_for('project.list_projects'))
+    project = check_project_owner(project_id)  # Authorization helper
     
     # İlişkili prompt'ları ve test sonuçlarını sil
     prompts = TestPrompt.query.filter_by(project_id=project_id).all()
