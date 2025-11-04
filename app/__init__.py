@@ -40,6 +40,15 @@ def create_app():
     
     # Create database tables
     with app.app_context():
+        # Ensure database directory exists for Azure File Share mount
+        db_url = app.config['SQLALCHEMY_DATABASE_URI']
+        if db_url.startswith('sqlite:///'):
+            db_path = db_url.replace('sqlite:///', '')
+            db_dir = os.path.dirname(db_path)
+            if db_dir and not os.path.exists(db_dir):
+                os.makedirs(db_dir, exist_ok=True)
+                print(f"Created database directory: {db_dir}")
+        
         db.create_all()
         
         # Create default admin user
@@ -48,11 +57,14 @@ def create_app():
         if not admin:
             admin_user = User(
                 username='admin',
-                is_admin=True
+                email='admin@example.com',
+                yetki=1,  # Admin
+                is_aktif=True
             )
+            admin_user.set_password('admin123')  # Default password
             db.session.add(admin_user)
             db.session.commit()
-            print("Default admin user created!")
+            print("Default admin user created! (username: admin, password: admin123)")
     
     return app
 

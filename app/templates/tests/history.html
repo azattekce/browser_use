@@ -86,7 +86,16 @@
                                     onclick="stopTest({{ test.id }})" title="Testi Durdur">
                                 <i class="fas fa-stop"></i>
                             </button>
+                        {% elif test.status in ['completed', 'failed'] %}
+                            <button class="btn btn-sm btn-outline-success" 
+                                    onclick="rerunTest({{ test.id }}, '{{ test.prompt.name }}')" title="Testi Tekrar Çalıştır">
+                                <i class="fas fa-redo"></i>
+                            </button>
                         {% endif %}
+                        <button class="btn btn-sm btn-outline-danger" 
+                                onclick="deleteTest({{ test.id }}, '{{ test.prompt.name }}')" title="Testi Sil">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </div>
                 </td>
             </tr>
@@ -159,6 +168,61 @@ function stopTest(testResultId) {
             if (response.ok) {
                 location.reload();
             }
+        });
+    }
+}
+
+// Test silme fonksiyonu
+function deleteTest(testId, testName) {
+    if (confirm(`"${testName}" adlı testi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
+        fetch(`/tests/result/${testId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Başarılı silme - sayfayı yenile
+                location.reload();
+            } else {
+                alert('Test silinirken bir hata oluştu: ' + (data.message || 'Bilinmeyen hata'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Test silinirken bir hata oluştu.');
+        });
+    }
+}
+
+// Test tekrar çalıştırma fonksiyonu
+function rerunTest(testId, testName) {
+    if (confirm(`"${testName}" adlı testi tekrar çalıştırmak istediğinizden emin misiniz?`)) {
+        fetch(`/tests/result/${testId}/rerun`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Başarılı tekrar çalıştırma - yeni test sonuç sayfasına git
+                alert('Test başarıyla tekrar başlatıldı!');
+                setTimeout(() => {
+                    window.location.href = `/tests/result/${data.new_test_id}`;
+                }, 1000);
+            } else {
+                alert('Test tekrar çalıştırılırken bir hata oluştu: ' + (data.message || 'Bilinmeyen hata'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Test tekrar çalıştırılırken bir hata oluştu. Lütfen tekrar deneyiniz.');
         });
     }
 }
