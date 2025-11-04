@@ -1366,25 +1366,29 @@ Object.defineProperty(navigator, 'permissions', {{
 
 STEP 2: Wait 3 seconds for JavaScript to load properly.
 
-STEP 3: If you see "You cannot access this right now" message, try:
-- Click on "Sign out and sign in with a different account" link
-- Wait 5 seconds
+STEP 3: CRITICAL - If you see "You cannot access this right now" error message (Error Code: 53003):
+- WAIT EXACTLY 15 SECONDS on this error page (this is mandatory!)
+- After 15 seconds, look for "Sign out and sign in with a different account" link
+- Click the link if found
+- Wait another 5 seconds
 - Continue with the authentication flow
 
 URL to visit: {project_url}
 
 Special handling for Microsoft login:
 1. Navigate to the URL carefully
-2. If you see "You cannot access this right now" message:
-   - Look for "Sign out and sign in with a different account" link and click it
-   - Or wait 3 seconds and refresh the page once
-   - Be patient, don't rush actions
-3. Wait for page elements to fully load before interacting
-4. When login form appears, proceed with the original task
+2. If you see "You cannot access this right now" message with error code 53003:
+   - ⏱️ IMMEDIATELY WAIT 15 SECONDS - DO NOT SKIP THIS!
+   - This wait is critical for Microsoft's security checks
+   - After 15 seconds, look for alternative login options
+   - Try "Sign out and sign in with a different account" if available
+   - Or wait and refresh the page once after the 15 second wait
+3. Be patient, don't rush actions - wait for page elements to fully load
+4. When login form appears after the wait, proceed with the original task
 
 Original task: {cleaned_content}
 
-Be methodical and wait between actions to avoid triggering security measures.
+REMEMBER: The 15-second wait on error page 53003 is MANDATORY. Be methodical and patient to avoid triggering more security measures.
 """
             formatted_prompt = microsoft_prompt
             # Microsoft siteler için daha yavaş işlem
@@ -1459,12 +1463,19 @@ Be methodical and wait between actions to avoid triggering security measures.
 ÖNEMLI: Bu bir Microsoft sitesi. Bot tespitini engellemek için:
 1. Sayfayı yükledikten sonra 3-5 saniye bekle
 2. Fare hareketlerini doğal yap, aniden tıklama
-3. Eğer 'You cannot access this right now' hatası alırsan, sayfayı yenile ve tekrar dene
-4. Giriş yapmaya çalışırken human-like davran
+3. ⏱️ KRİTİK: Eğer 'You cannot access this right now' hatası (Hata Kodu: 53003) alırsan:
+   - DERHAL TAM 15 SANİYE BEKLE - BU ZORUNLU!
+   - Bu bekleme Microsoft'un güvenlik kontrolleri için kritik
+   - 15 saniye sonra alternatif giriş seçeneklerini ara
+   - "Sign out and sign in with a different account" linkini ara ve tıkla
+   - Veya 15 saniye bekledikten sonra sayfayı yenile
+4. Giriş yapmaya çalışırken human-like davran, sabırlı ol
 5. CAPTCHA veya güvenlik kontrolü varsa, bunları rapor et
 
 Orijinal görev:
 {formatted_prompt}
+
+HATIRLA: Hata kodu 53003 ile hata sayfasında 15 saniyelik bekleme ZORUNLUDUR. Daha fazla güvenlik önlemi tetiklememek için sabırlı ve metodical ol.
 """
             formatted_prompt = enhanced_prompt
         
